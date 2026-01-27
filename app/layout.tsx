@@ -1,6 +1,8 @@
 import "./globals.css"
 import Link from "next/link"
-import { ShoppingCart, User, Search } from "lucide-react"
+import { ShoppingCart, User, Search, MessageCircle } from "lucide-react"
+
+
 
 export const metadata = {
   title: "Operadora Balles",
@@ -14,7 +16,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-slate-50 text-slate-900">
+      <body className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-slate-50 text-slate-900">
+
         <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur">
           <div className="mx-auto max-w-6xl px-4">
             <div className="flex items-center justify-between gap-3 py-3">
@@ -80,14 +83,22 @@ export default function RootLayout({
         <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
 
         {/* WhatsApp flotante */}
+
+
         <a
-          href="https://wa.me/525629782285"
-          target="_blank"
-          className="fixed bottom-5 right-5 rounded-full bg-green-500 px-4 py-3 text-white shadow-lg hover:brightness-95"
-          aria-label="WhatsApp"
-        >
-          WhatsApp
-        </a>
+  href="https://wa.me/5217715565797"
+  target="_blank"
+  className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-green-500 px-5 py-3 text-white shadow-[0_18px_45px_-25px_rgba(0,0,0,0.45)] hover:brightness-95"
+  aria-label="WhatsApp"
+>
+  <MessageCircle size={20} />
+  <span className="font-semibold">WhatsApp</span>
+</a>
+
+        
+
+
+
 
         <footer className="mt-16 border-t bg-white">
           <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-slate-600">
