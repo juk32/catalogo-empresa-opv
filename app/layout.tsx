@@ -91,7 +91,7 @@ export default function RootLayout({
 
         <footer className="mt-16 border-t bg-white">
           <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-slate-600">
-            Operadora Balles • Tlapacoya, Hidalgo
+            Operadora Balles •  Tlapacoya, Hidalgo
           </div>
         </footer>
       </body>
