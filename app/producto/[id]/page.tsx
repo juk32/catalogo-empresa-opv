@@ -1,9 +1,12 @@
 import Image from "next/image"
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { products } from "@/data/products"
 
-type Props = {
-  params: { id: string }
+type Props = { params: { id: string } }
+
+function formatMoney(n: number) {
+  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -20,41 +23,109 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
+function StockBadge({ stock }: { stock: number }) {
+  if (stock <= 0) {
+    return (
+      <span className="inline-flex rounded-full bg-rose-100 px-3 py-1 text-sm font-semibold text-rose-700">
+        Sin existencia
+      </span>
+    )
+  }
+  if (stock <= 5) {
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
+        Pocas piezas ({stock})
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+      En existencia ({stock})
+    </span>
+  )
+}
+
 export default function ProductoDetallePage({ params }: Props) {
   const product = products.find((p) => p.id === params.id)
   if (!product) return notFound()
 
+  const canOrder = product.stock > 0
+  const waText = `Hola, quiero ordenar: ${product.name} ($${formatMoney(product.price)})`
+  const waLink = `https://wa.me/5217715565797?text=${encodeURIComponent(waText)}`
+
   return (
     <section className="space-y-8">
+      {/* Card principal */}
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="rounded-2xl border bg-white p-6">
-          <div className="relative h-72 w-full overflow-hidden rounded-xl bg-slate-100">
-            <Image src={product.image} alt={product.name} fill className="object-contain p-6" />
+        {/* Imagen */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur">
+          <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              className="object-contain p-6"
+              priority
+            />
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-6 space-y-4">
-          <h1 className="text-3xl font-bold">{product.name}</h1>
-          <Stars rating={product.rating} />
-          <p className="text-slate-600">{product.description}</p>
+        {/* Info */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur">
+          <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-sky-300/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-rose-300/20 blur-3xl" />
 
-          <div className="text-2xl font-bold">${product.price.toFixed(2)}</div>
+          <div className="relative space-y-3">
+            <h1 className="text-3xl font-bold">{product.name}</h1>
+            <Stars rating={product.rating} />
 
-          <a
-            href={`https://wa.me/5217715565797?text=${encodeURIComponent(
-              `Hola, quiero ordenar: ${product.name} ($${product.price.toFixed(2)})`
-            )}`}
-            target="_blank"
-            className="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-6 py-3 font-semibold text-white hover:bg-sky-700"
-          >
-            Ordenar
-          </a>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-2xl font-bold">${formatMoney(product.price)}</div>
+              <StockBadge stock={product.stock} />
+            </div>
+
+            <p className="text-slate-700">{product.description}</p>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+              {/* Ordenar */}
+              <a
+                href={canOrder ? waLink : undefined}
+                target="_blank"
+                className={[
+                  "inline-flex items-center justify-center rounded-2xl px-6 py-3 font-semibold text-white shadow-[0_14px_35px_-22px_rgba(2,132,199,0.65)]",
+                  "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
+                  !canOrder ? "pointer-events-none opacity-50" : "",
+                ].join(" ")}
+              >
+                Ordenar
+              </a>
+
+              {/* Generar pedido */}
+              <Link
+                href={`/generar-pedido?add=${encodeURIComponent(product.id)}`}
+                className={[
+                  "inline-flex items-center justify-center rounded-2xl border border-white/70 bg-white/70 px-6 py-3 font-semibold",
+                  "shadow-[0_10px_25px_-15px_rgba(0,0,0,0.30)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-white",
+                  !canOrder ? "pointer-events-none opacity-50" : "",
+                ].join(" ")}
+              >
+                Generar pedido
+              </Link>
+            </div>
+
+            {!canOrder && (
+              <p className="text-sm font-semibold text-rose-700">
+                Este producto está sin existencia por el momento.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border bg-white p-6">
-        <h2 className="text-xl font-bold mb-3">Detalles</h2>
-        <ul className="list-disc pl-6 text-slate-700 space-y-1">
+      {/* Detalles */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur">
+        <h2 className="text-xl font-bold">Detalles</h2>
+        <ul className="mt-4 list-disc space-y-2 pl-6 text-slate-700">
           {product.details.map((d, idx) => (
             <li key={idx}>{d}</li>
           ))}

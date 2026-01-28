@@ -1,6 +1,7 @@
 import "./globals.css"
 import Link from "next/link"
 import { ShoppingCart, User, Search, MessageCircle } from "lucide-react"
+import Image from "next/image"
 
 
 
@@ -33,10 +34,10 @@ export default function RootLayout({
               {/* Menu */}
               <nav className="hidden md:flex items-center gap-5 text-sm">
                 <Link className="hover:text-sky-700" href="/">Inicio</Link>
-                <Link className="hover:text-sky-700" href="/productos">Productos</Link>
+                <Link className="hover:text-sky-700" href="/productos">Catalogo</Link>
                 <Link className="hover:text-sky-700" href="/generar-pedido">Generar Pedido</Link>
                 <Link className="hover:text-sky-700" href="/contacto">Contacto</Link>
-                <Link className="hover:text-sky-700" href="/accesorios">Accesorios</Link>
+                <Link className="hover:text-sky-700" href="/accesorios">Carrito</Link>
               </nav>
 
               {/* Search + icons */}
@@ -74,7 +75,7 @@ export default function RootLayout({
               <Link className="whitespace-nowrap hover:text-sky-700" href="/">Inicio</Link>
               <Link className="whitespace-nowrap hover:text-sky-700" href="/productos">Productos</Link>
               <Link className="whitespace-nowrap hover:text-sky-700" href="/generar-pedido">Generar Pedido</Link>
-              <Link className="whitespace-nowrap hover:text-sky-700" href="/contacto">Contacto</Link>
+            
               <Link className="whitespace-nowrap hover:text-sky-700" href="/accesorios">Accesorios</Link>
             </div>
           </div>
@@ -85,15 +86,23 @@ export default function RootLayout({
         {/* WhatsApp flotante */}
 
 
-        <a
+ <a
   href="https://wa.me/5217715565797"
   target="_blank"
-  className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-green-500 px-5 py-3 text-white shadow-[0_18px_45px_-25px_rgba(0,0,0,0.45)] hover:brightness-95"
   aria-label="WhatsApp"
+  className="fixed bottom-5 right-5 z-50 transition hover:-translate-y-1"
 >
-  <MessageCircle size={20} />
-  <span className="font-semibold">WhatsApp</span>
+  <div className="relative h-16 w-16 rounded-full shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)] hover:shadow-[0_28px_65px_-25px_rgba(0,0,0,0.55)]">
+    <Image
+      src="/icons/whatsapp.png"
+      alt="WhatsApp"
+      fill
+      className="object-contain"
+      priority
+    />
+  </div>
 </a>
+
 
         
 

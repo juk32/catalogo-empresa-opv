@@ -52,7 +52,7 @@ export default function HomePage() {
             <div className="relative mx-auto w-full max-w-xl overflow-hidden rounded-3xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
               <div className="relative h-72 w-full md:h-80">
                 <Image
-                  src="/home/hero.jpg"
+                  src="/public/hero.jpg"
                   alt="Hero"
                   fill
                   className="object-contain"
@@ -102,7 +102,7 @@ export default function HomePage() {
 
           <div className="relative mt-6 h-72 w-full overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
             <Image
-              src="/home/aceite.jpg"
+              src="/public/aceite.jpg"
               alt="Aceite"
               fill
               className="object-contain p-6"
