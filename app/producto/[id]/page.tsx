@@ -1,9 +1,9 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { useParams } from "next/navigation"
 import { products } from "@/data/products"
-
-type Props = { params: { id: string } }
 
 function formatMoney(n: number) {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -14,9 +14,7 @@ function Stars({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-1">
       {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={i < full ? "text-yellow-500" : "text-slate-300"}>
-          ★
-        </span>
+        <span key={i} className={i < full ? "text-yellow-500" : "text-slate-300"}>★</span>
       ))}
       <span className="ml-2 text-sm text-slate-500">{rating.toFixed(1)}</span>
     </div>
@@ -45,9 +43,42 @@ function StockBadge({ stock }: { stock: number }) {
   )
 }
 
-export default function ProductoDetallePage({ params }: Props) {
-  const product = products.find((p) => p.id === params.id)
-  if (!product) return notFound()
+export default function ProductoDetallePage() {
+  const params = useParams() as { id?: string }
+  const id = decodeURIComponent(params?.id ?? "").trim()
+
+  const product = products.find(
+    (p) => p.id.trim().toLowerCase() === id.toLowerCase()
+  )
+
+  if (!id || !product) {
+    return (
+      <section className="space-y-6">
+        <div className="rounded-3xl border bg-white/70 p-6 shadow-lg">
+          <h1 className="text-2xl font-bold">Producto no encontrado</h1>
+          <p className="mt-2 text-slate-600">
+            ID recibido: <span className="font-mono">{id || "(vacío)"}</span>
+          </p>
+        </div>
+
+        <div className="rounded-3xl border bg-white/70 p-6 shadow-lg">
+          <p className="font-semibold">IDs disponibles:</p>
+          <ul className="mt-3 list-disc pl-6 text-slate-700">
+            {products.map((x) => (
+              <li key={x.id} className="font-mono">{x.id}</li>
+            ))}
+          </ul>
+        </div>
+
+        <Link
+          href="/productos"
+          className="inline-flex rounded-2xl bg-gradient-to-r from-sky-600 to-rose-600 px-6 py-3 font-semibold text-white hover:brightness-95"
+        >
+          Volver a Productos
+        </Link>
+      </section>
+    )
+  }
 
   const canOrder = product.stock > 0
   const waText = `Hola, quiero ordenar: ${product.name} ($${formatMoney(product.price)})`
@@ -55,7 +86,6 @@ export default function ProductoDetallePage({ params }: Props) {
 
   return (
     <section className="space-y-8">
-      {/* Card principal */}
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         {/* Imagen */}
         <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur">
@@ -87,12 +117,12 @@ export default function ProductoDetallePage({ params }: Props) {
             <p className="text-slate-700">{product.description}</p>
 
             <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              {/* Ordenar */}
               <a
                 href={canOrder ? waLink : undefined}
                 target="_blank"
                 className={[
-                  "inline-flex items-center justify-center rounded-2xl px-6 py-3 font-semibold text-white shadow-[0_14px_35px_-22px_rgba(2,132,199,0.65)]",
+                  "inline-flex items-center justify-center rounded-2xl px-6 py-3 font-semibold text-white",
+                  "shadow-[0_14px_35px_-22px_rgba(2,132,199,0.65)]",
                   "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
                   !canOrder ? "pointer-events-none opacity-50" : "",
                 ].join(" ")}
@@ -100,7 +130,6 @@ export default function ProductoDetallePage({ params }: Props) {
                 Ordenar
               </a>
 
-              {/* Generar pedido */}
               <Link
                 href={`/generar-pedido?add=${encodeURIComponent(product.id)}`}
                 className={[
