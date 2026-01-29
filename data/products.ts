@@ -63,7 +63,7 @@ export const products: Product[] = [
   name: "Leche sabor chocolate 200 ML",
   price: 9.50,
   category: "Lacteos",
-  image: "/demo/leche_chocolate_200_ml.png",
+  image: "/demo/Leche Sabor Chocolate 200ML.png",
   description: "Leche sabor chocolate lista para beber.",
   details: [
     "Marca: Alpura",
