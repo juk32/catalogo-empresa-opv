@@ -51,7 +51,7 @@ export default function RootLayout({
                 </div>
 
                 <Link
-                  href="/generar-pedido"
+                  href="/carrito"
                   className="rounded-xl border bg-white p-2 hover:bg-slate-50"
                   aria-label="Carrito"
                   title="Carrito"
