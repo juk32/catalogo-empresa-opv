@@ -12,19 +12,23 @@ type Item = {
 export type PedidoPDFData = {
   folio: string
   fecha: string
-  solicitadoPor: string // cliente
+  solicitadoPor: string
   vendedor: string
   items: Item[]
 }
 
-const money = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const money = (n: number) =>
+  Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const styles = StyleSheet.create({
   page: { padding: 24, fontSize: 10, fontFamily: "Helvetica" },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   title: { fontSize: 12, fontWeight: 700 },
   rightBox: { borderWidth: 1, borderColor: "#999", padding: 8, width: 190 },
-  row: { flexDirection: "row", gap: 12, marginTop: 4 },
+
+  // 👇 QUITAMOS gap, usamos márgenes
+  row: { flexDirection: "row", marginTop: 4 },
+  rowItem: { marginRight: 12 },
 
   block: { borderWidth: 1, borderColor: "#999", padding: 8, marginBottom: 10 },
   blockTitle: { fontSize: 9, fontWeight: 700, marginBottom: 6 },
@@ -50,7 +54,10 @@ const styles = StyleSheet.create({
 })
 
 export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
-  const subtotal = data.items.reduce((acc, it) => acc + it.cantidad * it.costoUnitario, 0)
+  // ✅ Blindaje: si items viene raro, lo limpiamos
+  const items = Array.isArray(data?.items) ? (data.items.filter(Boolean) as Item[]) : []
+
+  const subtotal = items.reduce((acc, it) => acc + Number(it.cantidad || 0) * Number(it.costoUnitario || 0), 0)
 
   return (
     <Document>
@@ -60,15 +67,16 @@ export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
           <View>
             <Text style={styles.title}>OPERADORA BALLES</Text>
             <Text>REQUISICIÓN / PEDIDO</Text>
+
             <View style={styles.row}>
-              <Text>Vendedor: {data.vendedor}</Text>
-              <Text>Solicitado por: {data.solicitadoPor}</Text>
+              <Text style={styles.rowItem}>Vendedor: {String(data?.vendedor ?? "")}</Text>
+              <Text>Solicitado por: {String(data?.solicitadoPor ?? "")}</Text>
             </View>
           </View>
 
           <View style={styles.rightBox}>
-            <Text>FOLIO: {data.folio}</Text>
-            <Text>FECHA: {data.fecha}</Text>
+            <Text>FOLIO: {String(data?.folio ?? "")}</Text>
+            <Text>FECHA: {String(data?.fecha ?? "")}</Text>
             <Text>MONEDA: MXN</Text>
           </View>
         </View>
@@ -76,8 +84,8 @@ export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
         {/* Datos */}
         <View style={styles.block}>
           <Text style={styles.blockTitle}>DATOS DEL PEDIDO</Text>
-          <Text>Cliente / Solicitante: {data.solicitadoPor}</Text>
-          <Text>Atendió: {data.vendedor}</Text>
+          <Text>Cliente / Solicitante: {String(data?.solicitadoPor ?? "")}</Text>
+          <Text>Atendió: {String(data?.vendedor ?? "")}</Text>
         </View>
 
         {/* Tabla */}
@@ -91,15 +99,18 @@ export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
             <Text style={[styles.th, styles.cSub]}>SUBTOTAL</Text>
           </View>
 
-          {data.items.map((it, idx) => {
-            const sub = it.cantidad * it.costoUnitario
+          {items.map((it, idx) => {
+            const cant = Number(it.cantidad || 0)
+            const cu = Number(it.costoUnitario || 0)
+            const sub = cant * cu
+
             return (
-              <View key={idx} style={styles.tr}>
-                <Text style={[styles.td, styles.cCant]}>{it.cantidad}</Text>
-                <Text style={[styles.td, styles.cUni]}>{it.unidad}</Text>
-                <Text style={[styles.td, styles.cClave]}>{it.clave}</Text>
-                <Text style={[styles.td, styles.cDesc]}>{it.descripcion}</Text>
-                <Text style={[styles.td, styles.cUnit]}>${money(it.costoUnitario)}</Text>
+              <View key={`${it.clave}-${idx}`} style={styles.tr}>
+                <Text style={[styles.td, styles.cCant]}>{cant}</Text>
+                <Text style={[styles.td, styles.cUni]}>{String(it.unidad ?? "")}</Text>
+                <Text style={[styles.td, styles.cClave]}>{String(it.clave ?? "")}</Text>
+                <Text style={[styles.td, styles.cDesc]}>{String(it.descripcion ?? "")}</Text>
+                <Text style={[styles.td, styles.cUnit]}>${money(cu)}</Text>
                 <Text style={[styles.td, styles.cSub]}>${money(sub)}</Text>
               </View>
             )
