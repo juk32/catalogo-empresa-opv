@@ -26,6 +26,8 @@ export function getCart(): CartItem[] {
   return read()
 }
 
+
+
 export function addToCart(
   item: Omit<CartItem, "qty">,
   qty: number = 1
