@@ -1,34 +1,34 @@
+import { auth } from "@/auth"
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl
+export default auth((req) => {
+  const path = req.nextUrl.pathname
 
-  // Permitir siempre estas rutas
+  // Rutas públicas
   if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico"
+    path.startsWith("/login") ||
+    path.startsWith("/api/auth") ||
+    path.startsWith("/_next") ||
+    path === "/favicon.ico"
   ) {
     return NextResponse.next()
   }
 
-  // Protegidas (por ahora solo bloquea si NO hay cookie de sesión)
-  const protectedRoutes = ["/productos", "/producto", "/generar-pedido", "/admin"]
-  const isProtected = protectedRoutes.some((p) => pathname.startsWith(p))
+  // Si no hay sesión -> al login
+  if (!req.auth) {
+    const url = new URL("/login", req.nextUrl.origin)
+    url.searchParams.set("callbackUrl", req.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
 
-  if (isProtected) {
-    // NextAuth/Auth.js normalmente guarda algo en cookies (esto es “heurístico”)
-    // Si no hay cookies, lo mandamos a login.
-    const hasCookies = req.headers.get("cookie")?.length
-    if (!hasCookies) {
-      return NextResponse.redirect(new URL("/login", req.url))
-    }
+  // Ejemplo de rol admin (si luego haces /admin)
+  const role = (req.auth.user as any)?.role as string | undefined
+  if (path.startsWith("/admin") && role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.nextUrl.origin))
   }
 
   return NextResponse.next()
-}
+})
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

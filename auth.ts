@@ -1,11 +1,12 @@
-import type { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+import NextAuth from "next-auth"
+import Credentials from "next-auth/providers/credentials"
 import { users } from "@/data/users"
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt" },
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "credentials",
       credentials: {
         username: { label: "Usuario", type: "text" },
@@ -18,19 +19,21 @@ export const authOptions: NextAuthOptions = {
         const u = users.find((x) => x.username === username && x.password === password)
         if (!u) return null
 
-        return { id: u.id, name: u.name, role: u.role } as any
+        return { id: u.id, name: u.name, role: u.role }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
-      if (user) token.role = user.role
+    async jwt({ token, user }) {
+      if (user) token.role = (user as any).role
       return token
     },
-    async session({ session, token }: any) {
-      ;(session.user as any).role = token.role
+    async session({ session, token }) {
+      ;(session.user as any).role = (token as any).role
       return session
     },
   },
-  pages: { signIn: "/login" },
-}
+  pages: {
+    signIn: "/login",
+  },
+})
