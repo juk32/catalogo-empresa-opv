@@ -30,6 +30,26 @@ model OrderCounter {
   updatedAt DateTime @updatedAt
 }
 
+enum OrderStatus {
+  PENDIENTE
+  ENTREGADO
+}
+
+model DeliverySlot {
+  id        String   @id @default(cuid())
+  date      DateTime
+  window    String
+  enabled   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+
+  @@index([date])
+  @@index([enabled])
+}
+
 model Order {
   id           String      @id @default(cuid())
   folioNumber  Int         @unique
@@ -37,10 +57,10 @@ model Order {
   customerName String
   status       OrderStatus @default(PENDIENTE)
 
-  createdAt    DateTime @default(now())
+  createdAt    DateTime    @default(now())
   createdBy    String
 
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime    @updatedAt
   updatedBy    String?
 
   deliveredAt  DateTime?
@@ -48,8 +68,15 @@ model Order {
 
   deletedAt    DateTime?
 
+  // ✅ horario seleccionado
+  deliverySlotId String?
+  deliverySlot   DeliverySlot? @relation(fields: [deliverySlotId], references: [id])
+
   items        OrderItem[]
   audits       OrderAudit[]
+
+  @@index([deletedAt])
+  @@index([deliverySlotId])
 }
 
 model OrderItem {
@@ -61,7 +88,7 @@ model OrderItem {
   qty       Int
   unit      String  @default("PZ")
 
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
@@ -71,17 +98,12 @@ model OrderItem {
 model OrderAudit {
   id      String   @id @default(cuid())
   orderId String
-  action  String   // "CREATE" | "EDIT" | "DELETE" | "DELIVER"
+  action  String
   byUser  String
   at      DateTime @default(now())
   note    String?
 
-  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order   Order @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
-}
-
-enum OrderStatus {
-  PENDIENTE
-  ENTREGADO
 }

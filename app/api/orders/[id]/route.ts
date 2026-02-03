@@ -4,8 +4,31 @@ import { auth } from "@/auth"
 
 export const runtime = "nodejs"
 
-type UpdateOrderBody = {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+
+  const { id } = await params
+  if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true, deliverySlot: true },
+  })
+
+  if (!order || order.deletedAt) {
+    return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 })
+  }
+
+  return NextResponse.json(order)
+}
+
+type PatchBody = {
   customerName?: string
+  deliverySlotId?: string | null
   items?: Array<{
     productId: string
     name: string
@@ -15,20 +38,10 @@ type UpdateOrderBody = {
   }>
 }
 
-export async function GET(_: Request, ctx: { params: { id: string } }) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-
-  const order = await prisma.order.findFirst({
-    where: { id: ctx.params.id, deletedAt: null },
-    include: { items: true },
-  })
-
-  if (!order) return NextResponse.json({ error: "No existe" }, { status: 404 })
-  return NextResponse.json(order)
-}
-
-export async function PUT(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
@@ -37,22 +50,36 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 })
   }
 
+  const { id } = await params
+  if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
+
+  const body = (await req.json()) as PatchBody
   const userName = session.user.name ?? "Usuario"
-  const body = (await req.json()) as UpdateOrderBody
+
+  // validar slot si lo mandan
+  if (body.deliverySlotId !== undefined && body.deliverySlotId !== null) {
+    const slot = await prisma.deliverySlot.findUnique({ where: { id: body.deliverySlotId } })
+    if (!slot || !slot.enabled) {
+      return NextResponse.json({ error: "Horario inválido" }, { status: 400 })
+    }
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findFirst({
-      where: { id: ctx.params.id, deletedAt: null },
+    const existing = await tx.order.findUnique({
+      where: { id },
       include: { items: true },
     })
-    if (!order) throw new Error("NO_EXISTE")
 
-    // Reemplazo total de items (simple y estable)
+    if (!existing || existing.deletedAt) {
+      throw new Error("Pedido no encontrado")
+    }
+
+    // reemplazo total de items si vienen
     if (body.items) {
-      await tx.orderItem.deleteMany({ where: { orderId: order.id } })
+      await tx.orderItem.deleteMany({ where: { orderId: id } })
       await tx.orderItem.createMany({
         data: body.items.map((it) => ({
-          orderId: order.id,
+          orderId: id,
           productId: it.productId,
           name: it.name,
           unitPrice: it.unitPrice,
@@ -62,42 +89,40 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
       })
     }
 
-    const upd = await tx.order.update({
-      where: { id: order.id },
+    const order = await tx.order.update({
+      where: { id },
       data: {
-        customerName: body.customerName?.trim() ?? order.customerName,
+        customerName: body.customerName?.trim() || undefined,
+        deliverySlotId: body.deliverySlotId === undefined ? undefined : body.deliverySlotId,
         updatedBy: userName,
         audits: { create: { action: "EDIT", byUser: userName } },
       },
-      include: { items: true },
+      include: { items: true, deliverySlot: true },
     })
 
-    return upd
-  }).catch((e) => {
-    if (String(e?.message).includes("NO_EXISTE")) {
-      return null
-    }
-    throw e
+    return order
   })
 
-  if (!updated) return NextResponse.json({ error: "No existe" }, { status: 404 })
   return NextResponse.json(updated)
 }
 
-export async function DELETE(_: Request, ctx: { params: { id: string } }) {
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const role = (session.user as any).role as string | undefined
   if (role !== "ADMIN") return NextResponse.json({ error: "Solo ADMIN" }, { status: 403 })
 
+  const { id } = await params
+  if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
+
   const userName = session.user.name ?? "Usuario"
 
-  const order = await prisma.order.findFirst({ where: { id: ctx.params.id, deletedAt: null } })
-  if (!order) return NextResponse.json({ error: "No existe" }, { status: 404 })
-
   await prisma.order.update({
-    where: { id: order.id },
+    where: { id },
     data: {
       deletedAt: new Date(),
       updatedBy: userName,

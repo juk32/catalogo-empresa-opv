@@ -7,6 +7,7 @@ export const runtime = "nodejs"
 
 type CreateOrderBody = {
   customerName: string
+  deliverySlotId?: string
   items: Array<{
     productId: string
     name: string
@@ -18,8 +19,7 @@ type CreateOrderBody = {
 
 export async function GET() {
   const session = await auth()
-  // Si NO quieres proteger el historial, quita esto:
- 
+  if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const rows = await prisma.order.findMany({
     where: { deletedAt: null },
@@ -33,6 +33,7 @@ export async function GET() {
       createdBy: true,
       updatedAt: true,
       updatedBy: true,
+      deliverySlot: { select: { id: true, date: true, window: true, enabled: true } },
     },
   })
 
@@ -57,9 +58,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Faltan items" }, { status: 400 })
   }
 
+  // validar slot si viene
+  if (body.deliverySlotId) {
+    const slot = await prisma.deliverySlot.findUnique({ where: { id: body.deliverySlotId } })
+    if (!slot || !slot.enabled) {
+      return NextResponse.json({ error: "Horario inválido" }, { status: 400 })
+    }
+  }
+
   const userName = session.user.name ?? "Usuario"
 
-  // folio consecutivo seguro (SQLite)
   const result = await prisma.$transaction(async (tx) => {
     const counter = await tx.orderCounter.upsert({
       where: { id: 1 },
@@ -82,6 +90,7 @@ export async function POST(req: Request) {
         folio,
         customerName: body.customerName.trim(),
         createdBy: userName,
+        deliverySlotId: body.deliverySlotId ?? null,
         items: {
           create: body.items.map((it) => ({
             productId: it.productId,
@@ -91,11 +100,12 @@ export async function POST(req: Request) {
             unit: it.unit ?? "PZ",
           })),
         },
-        audits: {
-          create: { action: "CREATE", byUser: userName },
-        },
+        audits: { create: { action: "CREATE", byUser: userName } },
       },
-      include: { items: true },
+      include: {
+        items: true,
+        deliverySlot: true,
+      },
     })
 
     return order

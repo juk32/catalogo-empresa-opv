@@ -1,124 +1,207 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useParams } from "next/navigation"
 import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
 
-type Item = { productId: string; qty: number; name?: string }
+type OrderItem = {
+  id: string
+  productId: string
+  name: string
+  unitPrice: number
+  qty: number
+  unit: string
+}
+
+type Order = {
+  id: string
+  folio: string
+  customerName: string
+  status: "PENDIENTE" | "ENTREGADO"
+  items: OrderItem[]
+}
+
+function money(n: number) {
+  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 export default function EditPedidoPage() {
-  const { id } = useParams<{ id: string }>()
-  const orderId = Number(id)
+  const params = useParams() as { id?: string }
+  const id = params?.id
+  const router = useRouter()
 
-  const [cliente, setCliente] = useState("")
-  const [items, setItems] = useState<Item[]>([])
-  const [note, setNote] = useState("")
-
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [customerName, setCustomerName] = useState("")
+  const [items, setItems] = useState<OrderItem[]>([])
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function load() {
+    if (!id) return
+    setError(null)
+    const res = await fetch(`/api/orders/${id}`, { cache: "no-store" })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      setError(data?.error || "Pedido no encontrado")
+      setOrder(null)
+      return
+    }
+    setOrder(data)
+    setCustomerName(data.customerName || "")
+    setItems(data.items || [])
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  const total = useMemo(
+    () => items.reduce((acc, it) => acc + it.unitPrice * it.qty, 0),
+    [items]
+  )
+
+  function setQtyLocal(itemId: string, qty: number) {
+    setItems((prev) =>
+      prev.map((x) => (x.id === itemId ? { ...x, qty: Math.max(0, qty) } : x)).filter((x) => x.qty > 0)
+    )
+  }
+
+  async function onSave() {
+    if (!id) return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/orders")
-      if (!res.ok) throw new Error(await res.text())
-      const all = await res.json()
-      const found = all.find((x: any) => x.id === orderId)
-      if (!found) throw new Error("Pedido no encontrado")
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName,
+          items: items.map((it) => ({
+            productId: it.productId,
+            name: it.name,
+            unitPrice: it.unitPrice,
+            qty: it.qty,
+            unit: it.unit,
+          })),
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "No se pudo guardar")
 
-      setCliente(found.cliente)
-      setItems(found.items.map((it: any) => ({ productId: it.productId, qty: it.qty, name: it.name })))
+      await load()
+      router.refresh()
     } catch (e: any) {
-      setError(e?.message ?? "Error")
+      setError(e?.message ?? "Error al guardar")
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [orderId])
-
-  const canSave = useMemo(() => cliente.trim() && items.length > 0 && items.every((x) => x.qty > 0), [cliente, items])
-
-  async function save() {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cliente, items: items.map(({ productId, qty }) => ({ productId, qty })), note }),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      window.location.href = "/pedidos"
-    } catch (e: any) {
-      setError(e?.message ?? "Error al guardar")
-    } finally {
-      setSaving(false)
-    }
+  async function onPdf() {
+    if (!id) return
+    window.open(`/api/orders/${id}/pdf`, "_blank")
   }
 
-  if (loading) return <div className="text-slate-600">Cargando...</div>
-
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Editar pedido #{orderId}</h1>
-        <Link className="rounded-2xl border px-4 py-2 font-semibold" href="/pedidos">Volver</Link>
+    <section className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">
+          Editar pedido {order?.folio ? order.folio : ""}
+        </h1>
+        <Link className="rounded-2xl border px-4 py-2 font-semibold" href="/pedidos">
+          Volver
+        </Link>
       </div>
 
-      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{error}</div>}
+      {error && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+          {error}
+        </div>
+      )}
 
-      <div className="rounded-2xl border bg-white/70 p-4 space-y-2">
-        <div className="font-semibold">Cliente</div>
-        <input className="w-full rounded-xl border px-4 py-3" value={cliente} onChange={(e) => setCliente(e.target.value)} />
-      </div>
-
-      <div className="rounded-2xl border bg-white/70 p-4 space-y-3">
-        <div className="font-semibold">Productos</div>
-        {items.map((it, idx) => (
-          <div key={idx} className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="font-semibold">{it.name ?? it.productId}</div>
-              <div className="text-xs text-slate-600">{it.productId}</div>
-            </div>
+      {!order ? (
+        <div className="rounded-2xl border bg-white/70 p-4">Pedido no encontrado</div>
+      ) : (
+        <>
+          <div className="rounded-2xl border bg-white/70 p-4 space-y-3">
+            <label className="block text-sm font-semibold">Cliente</label>
             <input
-              type="number"
-              min={1}
-              className="w-24 rounded-xl border px-3 py-2"
-              value={it.qty}
-              onChange={(e) => {
-                const v = Number(e.target.value)
-                setItems((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: v } : x)))
-              }}
+              className="w-full rounded-xl border p-3"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Nombre del cliente"
             />
+          </div>
+
+          <div className="rounded-2xl border bg-white/70 p-4 space-y-3">
+            <div className="font-bold">Productos</div>
+
+            {items.map((it) => (
+              <div key={it.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3">
+                <div>
+                  <div className="font-semibold">{it.name}</div>
+                  <div className="text-xs text-slate-600">{it.productId}</div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    className="rounded-xl border px-3 py-2"
+                    onClick={() => setQtyLocal(it.id, it.qty - 1)}
+                  >
+                    -
+                  </button>
+                  <input
+                    className="w-20 rounded-xl border p-2 text-center"
+                    value={it.qty}
+                    onChange={(e) => setQtyLocal(it.id, Number(e.target.value || 0))}
+                  />
+                  <button
+                    className="rounded-xl border px-3 py-2"
+                    onClick={() => setQtyLocal(it.id, it.qty + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="text-sm">
+                  ${money(it.unitPrice)} c/u • <b>${money(it.unitPrice * it.qty)}</b>
+                </div>
+              </div>
+            ))}
+
+            {items.length === 0 && (
+              <div className="text-slate-600">No hay productos.</div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border bg-white/70 p-4">
+            <div className="text-lg font-bold">Total</div>
+            <div className="text-xl font-black">${money(total)}</div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
             <button
-              className="rounded-xl border px-3 py-2 font-semibold text-rose-700"
-              onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+              onClick={onSave}
+              disabled={loading}
+              className={[
+                "rounded-2xl px-6 py-3 font-semibold text-white",
+                "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
+                loading ? "opacity-60" : "",
+              ].join(" ")}
             >
-              Quitar
+              {loading ? "Guardando..." : "Guardar cambios"}
+            </button>
+
+            <button
+              onClick={onPdf}
+              className="rounded-2xl border bg-white/70 px-6 py-3 font-semibold"
+            >
+              PDF
             </button>
           </div>
-        ))}
-      </div>
-
-      <div className="rounded-2xl border bg-white/70 p-4 space-y-2">
-        <div className="font-semibold">Nota (opcional)</div>
-        <input className="w-full rounded-xl border px-4 py-3" value={note} onChange={(e) => setNote(e.target.value)} />
-      </div>
-
-      <button
-        disabled={!canSave || saving}
-        onClick={save}
-        className={[
-          "w-full rounded-2xl px-6 py-3 font-semibold text-white",
-          "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
-          (!canSave || saving) ? "opacity-60" : "",
-        ].join(" ")}
-      >
-        {saving ? "Guardando..." : "Guardar cambios"}
-      </button>
+        </>
+      )}
     </section>
   )
 }

@@ -6,7 +6,25 @@ import { useRouter } from "next/navigation"
 import { getCart, type CartItem, clearCart } from "@/lib/cart"
 
 function money(n: number) {
-  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+type DeliverySlot = {
+  id: string
+  date: string // ISO
+  window: string
+  enabled: boolean
+}
+
+function fmtDate(iso: string) {
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, "0")
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const yyyy = d.getFullYear()
+  return `${dd}/${mm}/${yyyy}`
 }
 
 export default function GenerarPedidoPage() {
@@ -17,8 +35,36 @@ export default function GenerarPedidoPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ✅ horarios
+  const [slots, setSlots] = useState<DeliverySlot[]>([])
+  const [deliverySlotId, setDeliverySlotId] = useState<string>("")
+  const [slotsLoading, setSlotsLoading] = useState(false)
+
   useEffect(() => {
     setItems(getCart())
+  }, [])
+
+  // ✅ cargar horarios (solo habilitados)
+  useEffect(() => {
+    ;(async () => {
+      setSlotsLoading(true)
+      try {
+        const res = await fetch("/api/delivery-slots", { cache: "no-store" })
+        const data = (await res.json().catch(() => [])) as DeliverySlot[]
+        const enabled = Array.isArray(data) ? data.filter((s) => s.enabled) : []
+        setSlots(enabled)
+
+        // si hay horarios y no hay seleccionado, selecciona el primero
+        if (enabled.length > 0 && !deliverySlotId) {
+          setDeliverySlotId(enabled[0].id)
+        }
+      } catch {
+        setSlots([])
+      } finally {
+        setSlotsLoading(false)
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const total = useMemo(
@@ -39,6 +85,12 @@ export default function GenerarPedidoPage() {
       return
     }
 
+    // ✅ si quieres hacerlo obligatorio, descomenta:
+    // if (!deliverySlotId) {
+    //   setError("Selecciona un horario de entrega.")
+    //   return
+    // }
+
     setLoading(true)
     try {
       // 1) Crear el pedido en DB
@@ -47,6 +99,7 @@ export default function GenerarPedidoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: customerName.trim(),
+          deliverySlotId: deliverySlotId || undefined, // ✅ manda horario (opcional)
           items: items.map((x) => ({
             productId: x.id,
             name: x.name,
@@ -78,8 +131,7 @@ export default function GenerarPedidoPage() {
       clearCart()
       setItems([])
 
-      // 3) Descargar PDF (abre el endpoint del PDF)
-      // Nota: esto navega y descarga/abre el PDF según tus headers
+      // 3) Descargar PDF
       window.location.href = `/api/orders/${orderId}/pdf`
     } catch (e: any) {
       setError(e?.message ?? "Error al generar PDF")
@@ -93,7 +145,10 @@ export default function GenerarPedidoPage() {
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Generar pedido</h1>
         <p className="text-slate-600">No hay productos en el carrito.</p>
-        <Link className="inline-flex rounded-2xl bg-sky-600 px-5 py-3 font-semibold text-white" href="/productos">
+        <Link
+          className="inline-flex rounded-2xl bg-sky-600 px-5 py-3 font-semibold text-white"
+          href="/productos"
+        >
           Ir a productos
         </Link>
       </section>
@@ -111,7 +166,9 @@ export default function GenerarPedidoPage() {
 
       {/* Cliente */}
       <div className="rounded-2xl border bg-white/70 p-4">
-        <label className="block text-sm font-semibold text-slate-700">Nombre del cliente</label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Nombre del cliente
+        </label>
         <input
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
@@ -120,10 +177,43 @@ export default function GenerarPedidoPage() {
         />
       </div>
 
+      {/* ✅ Horario de entrega */}
+      <div className="rounded-2xl border bg-white/70 p-4">
+        <label className="block text-sm font-semibold text-slate-700">
+          Horario de entrega
+        </label>
+
+        {slotsLoading ? (
+          <div className="mt-2 text-sm text-slate-600">Cargando horarios...</div>
+        ) : slots.length === 0 ? (
+          <div className="mt-2 text-sm text-slate-600">
+            No hay horarios disponibles (puedes dejarlo sin horario).
+          </div>
+        ) : (
+          <select
+            className="mt-2 w-full rounded-xl border p-3"
+            value={deliverySlotId}
+            onChange={(e) => setDeliverySlotId(e.target.value)}
+          >
+            {/* Si quieres permitir “Sin horario”, deja este option */}
+            <option value="">(Sin horario)</option>
+
+            {slots.map((s) => (
+              <option key={s.id} value={s.id}>
+                {fmtDate(s.date)} — {s.window}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
       {/* Items */}
       <div className="space-y-3">
         {items.map((x) => (
-          <div key={x.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white/70 p-4">
+          <div
+            key={x.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white/70 p-4"
+          >
             <div>
               <div className="font-bold">{x.name}</div>
               <div className="text-sm text-slate-600">{x.id}</div>
