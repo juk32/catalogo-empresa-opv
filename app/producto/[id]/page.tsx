@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { products } from "@/data/products"
+import { products } from "@/src/data/products"
 import GeneratePedidoButton from "./GeneratePedidoButton"
 
 function formatMoney(n: number) {

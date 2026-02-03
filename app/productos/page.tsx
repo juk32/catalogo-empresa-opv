@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { products } from "@/data/products"
+import { products } from "@/src/data/products"
 
 function formatMoney(n: number) {
   return n.toLocaleString("es-MX", {

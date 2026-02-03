@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { users } from "@/data/users"
+import { users } from "@/src/data/users"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { getCart, type CartItem, clearCart } from "@/lib/cart"
 
 function money(n: number) {
@@ -10,38 +9,34 @@ function money(n: number) {
 }
 
 export default function GenerarPedidoPage() {
-  const router = useRouter()
-
   const [items, setItems] = useState<CartItem[]>([])
   const [customerName, setCustomerName] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [loadingSave, setLoadingSave] = useState(false)
+  const [loadingPdf, setLoadingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [created, setCreated] = useState<{ id: string; folio: string } | null>(null)
 
   useEffect(() => {
     setItems(getCart())
   }, [])
 
-  const total = useMemo(
-    () => items.reduce((acc, x) => acc + x.price * x.qty, 0),
-    [items]
-  )
+  const total = useMemo(() => items.reduce((acc, x) => acc + x.price * x.qty, 0), [items])
 
-  async function onGeneratePdf() {
+  async function onSaveOrder() {
     setError(null)
 
     if (items.length === 0) {
       setError("Tu carrito está vacío.")
       return
     }
-
     if (!customerName.trim()) {
       setError("Escribe el nombre del cliente.")
       return
     }
 
-    setLoading(true)
+    setLoadingSave(true)
     try {
-      // 1) Crear el pedido en DB
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,35 +52,82 @@ export default function GenerarPedidoPage() {
         }),
       })
 
-      // 🔒 NO LOGUEADO -> mandar a /login y volver a esta página
-      if (res.status === 401) {
-        const callbackUrl = encodeURIComponent("/generar-pedido")
-        router.push(`/login?callbackUrl=${callbackUrl}`)
-        return
-      }
-
       const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.error || "No se pudo generar el pedido")
+        throw new Error(data?.error || "No se pudo guardar el pedido")
       }
 
-      // data es el Order creado (trae id)
-      const orderId = data?.id as string | undefined
-      if (!orderId) throw new Error("No se recibió el id del pedido")
+      setCreated({ id: data.id, folio: data.folio })
 
-      // 2) Vaciar carrito (ya que el pedido se generó bien)
+      // ✅ Reiniciar carrito SOLO cuando el pedido ya quedó guardado
       clearCart()
       setItems([])
-
-      // 3) Descargar PDF (abre el endpoint del PDF)
-      // Nota: esto navega y descarga/abre el PDF según tus headers
-      window.location.href = `/api/orders/${orderId}/pdf`
     } catch (e: any) {
-      setError(e?.message ?? "Error al generar PDF")
+      setError(e?.message ?? "Error al guardar pedido")
     } finally {
-      setLoading(false)
+      setLoadingSave(false)
     }
+  }
+
+  async function onDownloadPdf() {
+    if (!created) return
+    setError(null)
+    setLoadingPdf(true)
+    try {
+      const res = await fetch(`/api/orders/${created.id}/pdf`, { method: "GET" })
+      if (!res.ok) {
+        const t = await res.text()
+        throw new Error(t || "No se pudo generar el PDF")
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${created.folio}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      setError(e?.message ?? "Error al descargar PDF")
+    } finally {
+      setLoadingPdf(false)
+    }
+  }
+
+  // Si ya no hay items porque se limpió el carrito pero ya existe created, mostramos pantalla final
+  if (items.length === 0 && created) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-bold">Pedido guardado</h1>
+        <div className="rounded-2xl border bg-white/70 p-4">
+          <div className="font-semibold">Folio:</div>
+          <div className="mt-1 font-mono text-lg">{created.folio}</div>
+        </div>
+
+        {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{error}</div>}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={onDownloadPdf}
+            disabled={loadingPdf}
+            className="rounded-2xl bg-gradient-to-r from-sky-600 to-rose-600 px-5 py-3 font-semibold text-white hover:brightness-95 disabled:opacity-60"
+          >
+            {loadingPdf ? "Descargando..." : "Descargar PDF"}
+          </button>
+
+          <Link className="rounded-2xl border px-5 py-3 font-semibold" href="/pedidos">
+            Ver historial
+          </Link>
+
+          <Link className="rounded-2xl border px-5 py-3 font-semibold" href="/productos">
+            Volver a productos
+          </Link>
+        </div>
+      </section>
+    )
   }
 
   if (items.length === 0) {
@@ -115,8 +157,8 @@ export default function GenerarPedidoPage() {
         <input
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
-          placeholder="Ej. Hugo / Tienda X"
-          className="mt-2 w-full rounded-xl border p-3"
+          placeholder="Ej: Juan Pérez"
+          className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-300"
         />
       </div>
 
@@ -136,7 +178,6 @@ export default function GenerarPedidoPage() {
         ))}
       </div>
 
-      {/* Total */}
       <div className="flex items-center justify-between rounded-2xl border bg-white/70 p-4">
         <div className="text-lg font-bold">Total</div>
         <div className="text-xl font-black">${money(total)}</div>
@@ -148,16 +189,17 @@ export default function GenerarPedidoPage() {
         </div>
       )}
 
+      {/* PASO B: Guardar primero */}
       <button
-        onClick={onGeneratePdf}
-        disabled={loading}
+        onClick={onSaveOrder}
+        disabled={loadingSave}
         className={[
           "w-full rounded-2xl px-6 py-3 font-semibold text-white",
           "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
-          loading ? "opacity-60" : "",
+          loadingSave ? "opacity-60" : "",
         ].join(" ")}
       >
-        {loading ? "Generando..." : "Generar PDF"}
+        {loadingSave ? "Guardando pedido..." : "Guardar pedido"}
       </button>
     </section>
   )
