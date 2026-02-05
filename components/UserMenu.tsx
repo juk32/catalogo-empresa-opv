@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
-import { User as UserIcon, LogOut, LogIn, ListOrdered } from "lucide-react"
+import {
+  User as UserIcon,
+  LogOut,
+  LogIn,
+  ListOrdered,
+  PlusCircle,
+} from "lucide-react"
 
 type SessionUser = {
   name?: string | null
@@ -43,12 +49,9 @@ export default function UserMenu() {
   }, [])
 
   async function onLogout() {
-    // Limpia carrito local
     try {
       localStorage.removeItem("cart_v1")
     } catch {}
-
-    // Cierra sesión
     await signOut({ callbackUrl: "/" })
   }
 
@@ -77,14 +80,16 @@ export default function UserMenu() {
                 <div className="text-sm font-semibold">
                   {user.name ?? "Usuario"}
                 </div>
-                <div className="text-xs text-slate-600">
-                  {user.role ?? "—"}
-                </div>
+                <div className="text-xs text-slate-600">{user.role ?? "—"}</div>
               </>
             ) : (
               <>
-                <div className="text-sm font-semibold">No has iniciado sesión</div>
-                <div className="text-xs text-slate-600">Puedes navegar el catálogo</div>
+                <div className="text-sm font-semibold">
+                  No has iniciado sesión
+                </div>
+                <div className="text-xs text-slate-600">
+                  Puedes navegar el catálogo
+                </div>
               </>
             )}
           </div>
@@ -102,6 +107,18 @@ export default function UserMenu() {
                   <ListOrdered size={18} />
                   Historial de pedidos
                 </Link>
+
+                {/* ✅ SOLO ADMIN */}
+                {user.role === "ADMIN" && (
+                  <Link
+                    href="/admin/productos"
+                    onClick={() => setOpen(false)}
+                    className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-slate-50"
+                  >
+                    <PlusCircle size={18} />
+                    Administrar Catalogo
+                  </Link>
+                )}
 
                 <button
                   onClick={onLogout}

@@ -4,19 +4,13 @@ import { auth } from "@/auth"
 
 export const runtime = "nodejs"
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-
-  const { id } = await params
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { items: true, deliverySlot: true },
+    include: { items: true },
   })
 
   if (!order || order.deletedAt) {
@@ -28,7 +22,7 @@ export async function GET(
 
 type PatchBody = {
   customerName?: string
-  deliverySlotId?: string | null
+  deliveryAt?: string | null
   items?: Array<{
     productId: string
     name: string
@@ -38,10 +32,7 @@ type PatchBody = {
   }>
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
@@ -50,73 +41,71 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado" }, { status: 403 })
   }
 
-  const { id } = await params
+  const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   const body = (await req.json()) as PatchBody
   const userName = session.user.name ?? "Usuario"
 
-  // validar slot si lo mandan
-  if (body.deliverySlotId !== undefined && body.deliverySlotId !== null) {
-    const slot = await prisma.deliverySlot.findUnique({ where: { id: body.deliverySlotId } })
-    if (!slot || !slot.enabled) {
-      return NextResponse.json({ error: "Horario inválido" }, { status: 400 })
-    }
-  }
-
-  const updated = await prisma.$transaction(async (tx) => {
-    const existing = await tx.order.findUnique({
-      where: { id },
-      include: { items: true },
-    })
-
-    if (!existing || existing.deletedAt) {
-      throw new Error("Pedido no encontrado")
-    }
-
-    // reemplazo total de items si vienen
-    if (body.items) {
-      await tx.orderItem.deleteMany({ where: { orderId: id } })
-      await tx.orderItem.createMany({
-        data: body.items.map((it) => ({
-          orderId: id,
-          productId: it.productId,
-          name: it.name,
-          unitPrice: it.unitPrice,
-          qty: it.qty,
-          unit: it.unit ?? "PZ",
-        })),
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
       })
-    }
 
-    const order = await tx.order.update({
-      where: { id },
-      data: {
+      if (!existing || existing.deletedAt) {
+        throw new Error("Pedido no encontrado")
+      }
+
+      if (body.items) {
+        await tx.orderItem.deleteMany({ where: { orderId: id } })
+        await tx.orderItem.createMany({
+          data: body.items.map((it) => ({
+            orderId: id,
+            productId: it.productId,
+            name: it.name,
+            unitPrice: it.unitPrice,
+            qty: it.qty,
+            unit: it.unit ?? "PZ",
+          })),
+        })
+      }
+
+      const dataToUpdate: any = {
         customerName: body.customerName?.trim() || undefined,
-        deliverySlotId: body.deliverySlotId === undefined ? undefined : body.deliverySlotId,
         updatedBy: userName,
         audits: { create: { action: "EDIT", byUser: userName } },
-      },
-      include: { items: true, deliverySlot: true },
+      }
+
+      // ✅ Solo ADMIN puede modificar deliveryAt
+      if (role === "ADMIN" && body.deliveryAt !== undefined) {
+        dataToUpdate.deliveryAt = body.deliveryAt ? new Date(body.deliveryAt) : null
+      }
+
+      const order = await tx.order.update({
+        where: { id },
+        data: dataToUpdate,
+        include: { items: true },
+      })
+
+      return order
     })
 
-    return order
-  })
-
-  return NextResponse.json(updated)
+    return NextResponse.json(updated)
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 400 })
+  }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const role = (session.user as any).role as string | undefined
   if (role !== "ADMIN") return NextResponse.json({ error: "Solo ADMIN" }, { status: 403 })
 
-  const { id } = await params
+  const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   const userName = session.user.name ?? "Usuario"

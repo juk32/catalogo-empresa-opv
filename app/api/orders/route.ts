@@ -7,7 +7,7 @@ export const runtime = "nodejs"
 
 type CreateOrderBody = {
   customerName: string
-  deliverySlotId?: string
+  deliveryAt?: string | null
   items: Array<{
     productId: string
     name: string
@@ -33,7 +33,7 @@ export async function GET() {
       createdBy: true,
       updatedAt: true,
       updatedBy: true,
-      deliverySlot: { select: { id: true, date: true, window: true, enabled: true } },
+      deliveryAt: true, 
     },
   })
 
@@ -56,14 +56,6 @@ export async function POST(req: Request) {
   }
   if (!Array.isArray(body.items) || body.items.length === 0) {
     return NextResponse.json({ error: "Faltan items" }, { status: 400 })
-  }
-
-  // validar slot si viene
-  if (body.deliverySlotId) {
-    const slot = await prisma.deliverySlot.findUnique({ where: { id: body.deliverySlotId } })
-    if (!slot || !slot.enabled) {
-      return NextResponse.json({ error: "Horario inválido" }, { status: 400 })
-    }
   }
 
   const userName = session.user.name ?? "Usuario"
@@ -90,7 +82,7 @@ export async function POST(req: Request) {
         folio,
         customerName: body.customerName.trim(),
         createdBy: userName,
-        deliverySlotId: body.deliverySlotId ?? null,
+        deliveryAt: body.deliveryAt ? new Date(body.deliveryAt) : null, // ✅
         items: {
           create: body.items.map((it) => ({
             productId: it.productId,
@@ -100,12 +92,11 @@ export async function POST(req: Request) {
             unit: it.unit ?? "PZ",
           })),
         },
-        audits: { create: { action: "CREATE", byUser: userName } },
+        audits: {
+          create: { action: "CREATE", byUser: userName },
+        },
       },
-      include: {
-        items: true,
-        deliverySlot: true,
-      },
+      include: { items: true },
     })
 
     return order

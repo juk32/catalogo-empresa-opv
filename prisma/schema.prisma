@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Product {
-  id          String   @id
+  id          String  @id
   name        String
   price       Float
   category    String
@@ -35,75 +35,56 @@ enum OrderStatus {
   ENTREGADO
 }
 
-model DeliverySlot {
-  id        String   @id @default(cuid())
-  date      DateTime
-  window    String
-  enabled   Boolean  @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  orders    Order[]
-
-  @@index([date])
-  @@index([enabled])
-}
-
 model Order {
-  id           String      @id @default(cuid())
-  folioNumber  Int         @unique
-  folio        String      @unique
-  customerName String
-  status       OrderStatus @default(PENDIENTE)
+  id            String      @id @default(cuid())
+  folioNumber   Int         @unique
+  folio         String      @unique
+  customerName  String
+  status        OrderStatus @default(PENDIENTE)
 
-  createdAt    DateTime    @default(now())
-  createdBy    String
+  createdAt     DateTime    @default(now())
+  createdBy     String
 
-  updatedAt    DateTime    @updatedAt
-  updatedBy    String?
+  updatedAt     DateTime    @updatedAt
+  updatedBy     String?
 
-  deliveredAt  DateTime?
-  deliveredBy  String?
+  deliveredAt   DateTime?
+  deliveredBy   String?
 
-  deletedAt    DateTime?
+  deletedAt     DateTime?
 
-  // ✅ horario seleccionado
-  deliverySlotId String?
-  deliverySlot   DeliverySlot? @relation(fields: [deliverySlotId], references: [id])
+  // ✅ NUEVO: horario de entrega elegido (opcional)
+  deliveryAt    DateTime?
 
-  items        OrderItem[]
-  audits       OrderAudit[]
-
-  @@index([deletedAt])
-  @@index([deliverySlotId])
+  items         OrderItem[]
+  audits        OrderAudit[]
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  productId String
-  name      String
-  unitPrice Float
-  qty       Int
-  unit      String  @default("PZ")
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  name        String
+  unitPrice   Float
+  qty         Int
+  unit        String  @default("PZ")
 
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
 }
 
 model OrderAudit {
-  id      String   @id @default(cuid())
-  orderId String
-  action  String
-  byUser  String
-  at      DateTime @default(now())
-  note    String?
+  id        String   @id @default(cuid())
+  orderId   String
+  action    String   // "CREATE" | "EDIT" | "DELETE" | "DELIVER"
+  byUser    String
+  at        DateTime @default(now())
+  note      String?
 
-  order   Order @relation(fields: [orderId], references: [id])
+  order     Order @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
 }

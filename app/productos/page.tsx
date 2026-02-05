@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { products } from "@/src/data/products"
+import { prisma } from "@/lib/prisma"
 
 function formatMoney(n: number) {
   return n.toLocaleString("es-MX", {
@@ -9,7 +9,11 @@ function formatMoney(n: number) {
   })
 }
 
-export default function ProductosPage() {
+export default async function ProductosPage() {
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: "desc" },
+  })
+
   return (
     <section className="space-y-6">
       <div>
@@ -37,12 +41,9 @@ export default function ProductosPage() {
                 <h2 className="font-semibold">{p.name}</h2>
                 <p className="text-sm text-slate-500">{p.category}</p>
               </div>
-              <div className="font-bold">
-                ${formatMoney(p.price)}
-              </div>
+              <div className="font-bold">${formatMoney(p.price)}</div>
             </div>
 
-            {/* 🔴 LINK CORRECTO */}
             <Link
               href={`/producto/${p.id}`}
               className="mt-4 block rounded-2xl bg-gradient-to-r from-sky-600 to-rose-600 py-2 text-center font-semibold text-white shadow hover:brightness-95"
