@@ -11,12 +11,14 @@ function isAdmin(session: any) {
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!isAdmin(session)) return NextResponse.json({ error: "Solo ADMIN" }, { status: 403 })
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "Solo ADMIN" }, { status: 403 })
+  }
 
-  const { id } = await params
+  const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   await prisma.deliverySlot.delete({ where: { id } })

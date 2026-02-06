@@ -5,7 +5,7 @@ import { auth } from "@/auth"
 export const runtime = "nodejs"
 
 export async function POST(
-  _: Request,
+  _req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
@@ -50,7 +50,9 @@ export async function POST(
           deliveredAt: new Date(),
           deliveredBy: userName,
           updatedBy: userName,
-          audits: { create: { action: "DELIVER", byUser: userName } },
+          audits: {
+            create: { action: "DELIVER", byUser: userName },
+          },
         },
         include: { items: true },
       })
@@ -62,6 +64,9 @@ export async function POST(
       throw e
     })
 
-  if (!result) return NextResponse.json({ error: "No existe" }, { status: 404 })
+  if (!result) {
+    return NextResponse.json({ error: "No existe" }, { status: 404 })
+  }
+
   return NextResponse.json(result)
 }
