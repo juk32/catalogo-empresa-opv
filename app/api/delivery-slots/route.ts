@@ -44,14 +44,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Fechas inválidas" }, { status: 400 })
   }
   if (endAt <= startAt) {
-    return NextResponse.json({ error: "endAt debe ser mayor a startAt" }, { status: 400 })
+    return NextResponse.json(
+      { error: "endAt debe ser mayor a startAt" },
+      { status: 400 }
+    )
+  }
+
+  const capacity = body.capacity ?? 999
+  if (!Number.isFinite(capacity) || capacity < 1) {
+    return NextResponse.json({ error: "capacity inválida" }, { status: 400 })
+  }
+
+  // Opcional: no permitir crear slots ya pasados
+  const now = new Date()
+  if (endAt <= now) {
+    return NextResponse.json(
+      { error: "No puedes crear un slot que ya terminó" },
+      { status: 400 }
+    )
   }
 
   const slot = await prisma.deliverySlot.create({
     data: {
       startAt,
       endAt,
-      capacity: body.capacity ?? 999,
+      capacity,
       active: body.active ?? true,
     },
   })

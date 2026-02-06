@@ -88,3 +88,17 @@ model OrderAudit {
 
   @@index([orderId])
 }
+model DeliverySlot {
+  id        String   @id @default(cuid())
+  startAt   DateTime
+  endAt     DateTime
+  capacity  Int      @default(999)
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startAt])
+  @@index([endAt])
+  @@index([active])
+}
