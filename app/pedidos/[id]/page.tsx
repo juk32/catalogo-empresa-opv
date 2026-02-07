@@ -26,7 +26,7 @@ function money(n: number) {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export default function Page() {
+export default function EditarPedidoPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -37,11 +37,14 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null)
 
   const [customerName, setCustomerName] = useState("")
-  const [deliveryAt, setDeliveryAt] = useState("")
+  const [deliveryAt, setDeliveryAt] = useState("") // datetime-local
   const [items, setItems] = useState<Item[]>([])
   const [folio, setFolio] = useState("")
 
-  const total = useMemo(() => items.reduce((acc, x) => acc + x.unitPrice * x.qty, 0), [items])
+  const total = useMemo(
+    () => items.reduce((acc, x) => acc + x.unitPrice * x.qty, 0),
+    [items]
+  )
 
   async function load() {
     setError(null)
@@ -63,6 +66,7 @@ export default function Page() {
       setItems(Array.isArray(o.items) ? o.items : [])
       setFolio(o.folio || "")
 
+      // ISO -> datetime-local
       if (o.deliveryAt) {
         const d = new Date(o.deliveryAt)
         const pad = (n: number) => String(n).padStart(2, "0")
@@ -82,19 +86,21 @@ export default function Page() {
     setError(null)
     setSaving(true)
     try {
+      // ✅ Solo mandamos campos editables del pedido
       const res = await fetch(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: customerName.trim(),
           deliveryAt: deliveryAt ? new Date(deliveryAt).toISOString() : null,
-          items: items.map((it) => ({ id: it.id, qty: Number(it.qty) })), // ✅ solo qty
+          // 🚫 NO mandamos items; así nadie cambia name/unitPrice desde el cliente
         }),
       })
 
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || "No se pudo guardar")
 
+      // ✅ refresca y vuelve al listado
       router.refresh()
       router.push("/pedidos")
     } catch (e: any) {
@@ -169,7 +175,9 @@ export default function Page() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700">Horario de entrega (opcional)</label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Horario de entrega (opcional)
+          </label>
           <input
             type="datetime-local"
             className="mt-2 w-full rounded-xl border p-3"
@@ -184,11 +192,16 @@ export default function Page() {
 
         <div className="space-y-2">
           {items.map((it, idx) => (
-            <div key={`${it.productId}-${idx}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3">
+            <div
+              key={`${it.productId}-${idx}`}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3"
+            >
               <div>
                 <div className="font-semibold">{it.name}</div>
                 <div className="text-xs text-slate-600">{it.productId}</div>
-                <div className="text-xs text-slate-500">Precio congelado: ${money(it.unitPrice)}</div>
+                <div className="text-xs text-slate-500">
+                  Precio congelado: ${money(it.unitPrice)}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -214,6 +227,10 @@ export default function Page() {
           <div className="font-bold">Total</div>
           <div className="font-black text-lg">${money(total)}</div>
         </div>
+
+        <p className="mt-2 text-xs text-slate-600">
+          Nota: El nombre y precio de los productos en un pedido no se editan aquí.
+        </p>
       </div>
 
       <button
