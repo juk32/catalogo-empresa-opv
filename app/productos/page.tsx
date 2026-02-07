@@ -1,9 +1,14 @@
 import { prisma } from "@/lib/prisma"
 import ProductCard3D from "./ProductCard3D"
+import { unstable_noStore as noStore } from "next/cache"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export default async function ProductosPage() {
+  noStore()
+
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
   })
