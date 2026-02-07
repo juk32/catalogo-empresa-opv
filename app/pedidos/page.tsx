@@ -1,216 +1,161 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useParams, useRouter } from "next/navigation"
 
-type OrderRow = {
+type Item = {
+  id?: string
+  productId: string
+  name: string
+  unitPrice: number
+  qty: number
+  unit?: string
+}
+
+type OrderData = {
   id: string
   folio: string
   customerName: string
   status: "PENDIENTE" | "ENTREGADO"
-  createdAt: string
-  createdBy: string
-  updatedAt: string
-  updatedBy: string | null
-  deliveredAt?: string | null // si lo manejas
-  deliveryAt?: string | null  // si tú guardas fecha/hora entrega en un solo campo
-  deliveryStart?: string | null // si lo guardas por separado
-  deliveryEnd?: string | null
+  deliveryAt: string | null
+  items: Item[]
 }
 
-function fmtDT(v?: string | null) {
-  if (!v) return ""
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime())) return ""
-  return d.toLocaleString("es-MX")
+function money(n: number) {
+  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function DeliveryText(o: OrderRow) {
-  // Ajusta según tu modelo real:
-  // - si guardas "deliveryAt" => úsalo
-  // - si guardas "deliveryStart/end" => arma rango
-  if (o.deliveryAt) return `Entrega: ${fmtDT(o.deliveryAt)}`
-  if (o.deliveryStart && o.deliveryEnd) return `Entrega: ${fmtDT(o.deliveryStart)} - ${fmtDT(o.deliveryEnd)}`
-  if (o.deliveryStart) return `Entrega: ${fmtDT(o.deliveryStart)}`
-  return "Entrega: (sin horario)"
-}
-
-/** Modal reutilizable */
-function ConfirmModal({
-  open,
-  title,
-  message,
-  confirmText = "Eliminar",
-  cancelText = "Cancelar",
-  loading = false,
-  danger = true,
-  onConfirm,
-  onClose,
-}: {
-  open: boolean
-  title: string
-  message: string
-  confirmText?: string
-  cancelText?: string
-  loading?: boolean
-  danger?: boolean
-  onConfirm: () => void
-  onClose: () => void
-}) {
-  if (!open) return null
-
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-      {/* overlay */}
-      <button
-        aria-label="Cerrar modal"
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
-
-      {/* card */}
-      <div className="relative w-full max-w-md rounded-3xl border bg-white p-5 shadow-[0_25px_80px_-35px_rgba(0,0,0,0.55)]">
-        <h3 className="text-lg font-bold">{title}</h3>
-        <p className="mt-2 text-sm text-slate-600">{message}</p>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-2xl border px-4 py-2 font-semibold hover:bg-slate-50 disabled:opacity-60"
-          >
-            {cancelText}
-          </button>
-
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className={[
-              "rounded-2xl px-4 py-2 font-semibold text-white disabled:opacity-60",
-              danger ? "bg-rose-600 hover:bg-rose-700" : "bg-sky-600 hover:bg-sky-700",
-            ].join(" ")}
-          >
-            {loading ? "Procesando..." : confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function PedidosPage() {
+export default function EditarPedidoPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const params = useParams<{ id: string }>()
+  const id = params.id
 
-  const [rows, setRows] = useState<OrderRow[]>([])
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // modal state
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [deleteFolio, setDeleteFolio] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [customerName, setCustomerName] = useState("")
+  const [deliveryAt, setDeliveryAt] = useState("") // datetime-local
+  const [items, setItems] = useState<Item[]>([])
+  const [folio, setFolio] = useState("")
+
+  const total = useMemo(
+    () => items.reduce((acc, x) => acc + x.unitPrice * x.qty, 0),
+    [items]
+  )
 
   async function load() {
     setError(null)
     setLoading(true)
     try {
-      const res = await fetch("/api/orders", { cache: "no-store" })
+      const res = await fetch(`/api/orders/${id}`, { cache: "no-store" })
 
-      // no logueado
       if (res.status === 401) {
-        const callbackUrl = encodeURIComponent("/pedidos")
+        const callbackUrl = encodeURIComponent(`/pedidos/${id}`)
         router.push(`/login?callbackUrl=${callbackUrl}`)
         return
       }
 
-      const text = await res.text()
-      let data: any = null
-      try {
-        data = JSON.parse(text)
-      } catch {
-        throw new Error(`API no devolvió JSON. Status ${res.status}`)
-      }
+      const data = (await res.json()) as any
+      if (!res.ok) throw new Error(data?.error || "No se pudo cargar")
 
-      if (!res.ok) {
-        throw new Error(data?.error || "No se pudo cargar el historial")
-      }
+      const o = data as OrderData
+      setCustomerName(o.customerName || "")
+      setItems(Array.isArray(o.items) ? o.items : [])
+      setFolio(o.folio || "")
 
-      setRows(Array.isArray(data) ? data : [])
+      // ISO -> datetime-local
+      if (o.deliveryAt) {
+        const d = new Date(o.deliveryAt)
+        const pad = (n: number) => String(n).padStart(2, "0")
+        const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+        setDeliveryAt(local)
+      } else {
+        setDeliveryAt("")
+      }
     } catch (e: any) {
-      setRows([])
-      setError(e?.message ?? "No se pudo cargar el historial")
+      setError(e?.message ?? "Pedido no encontrado")
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  function openPdf(id: string) {
-    window.location.href = `/api/orders/${id}/pdf`
-  }
-
-  function askDelete(id: string, folio: string) {
-    setDeleteId(id)
-    setDeleteFolio(folio)
-    setConfirmOpen(true)
-  }
-
-  async function onDeleteConfirmed() {
-    if (!deleteId) return
-    setDeleting(true)
+  async function onSave() {
     setError(null)
-
+    setSaving(true)
     try {
-      const res = await fetch(`/api/orders/${deleteId}`, { method: "DELETE" })
+      // ✅ Solo mandamos campos editables del pedido
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: customerName.trim(),
+          deliveryAt: deliveryAt ? new Date(deliveryAt).toISOString() : null,
+          // 🚫 NO mandamos items; así nadie cambia name/unitPrice desde el cliente
+        }),
+      })
 
-      // no logueado
-      if (res.status === 401) {
-        const callbackUrl = encodeURIComponent("/pedidos")
-        router.push(`/login?callbackUrl=${callbackUrl}`)
-        return
-      }
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "No se pudo guardar")
 
-      const text = await res.text()
-      let data: any = null
-      try {
-        data = JSON.parse(text)
-      } catch {
-        // si no hay json, igual marcamos error
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.error || "No se pudo eliminar")
-      }
-
-      // cerrar modal y recargar
-      setConfirmOpen(false)
-      setDeleteId(null)
-      setDeleteFolio(null)
-      await load()
+      // ✅ refresca y vuelve al listado
+      router.refresh()
+      router.push("/pedidos")
     } catch (e: any) {
-      setError(e?.message ?? "No se pudo eliminar")
+      setError(e?.message ?? "Error al guardar")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onDelete() {
+    if (!confirm("¿Seguro que quieres eliminar este pedido?")) return
+    setError(null)
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: "DELETE" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "No se pudo eliminar")
+
+      router.refresh()
+      router.push("/pedidos")
+    } catch (e: any) {
+      setError(e?.message ?? "Error al eliminar")
     } finally {
       setDeleting(false)
     }
   }
 
-  const isAdmin = (session?.user as any)?.role === "ADMIN"
+  useEffect(() => {
+    if (id) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  if (loading) return <div className="text-slate-600">Cargando...</div>
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Historial de pedidos</h1>
-        <Link className="rounded-2xl border px-4 py-2 font-semibold" href="/">
-          Volver
-        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Editar pedido</h1>
+          {folio && <div className="text-sm text-slate-600">{folio}</div>}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onDelete}
+            disabled={deleting || saving}
+            className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-2 font-semibold text-rose-700 disabled:opacity-50"
+          >
+            {deleting ? "Eliminando..." : "Eliminar"}
+          </button>
+
+          <Link className="rounded-2xl border px-4 py-2 font-semibold" href="/pedidos">
+            Volver
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -219,79 +164,86 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-slate-600">Cargando...</div>
-      ) : rows.length === 0 ? (
-        <div className="text-slate-600">No hay pedidos.</div>
-      ) : (
-        <div className="space-y-4">
-          {rows.map((o) => (
+      <div className="rounded-2xl border bg-white/70 p-4 space-y-3">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700">Cliente</label>
+          <input
+            className="mt-2 w-full rounded-xl border p-3"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700">
+            Horario de entrega (opcional)
+          </label>
+          <input
+            type="datetime-local"
+            className="mt-2 w-full rounded-xl border p-3"
+            value={deliveryAt}
+            onChange={(e) => setDeliveryAt(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border bg-white/70 p-4">
+        <div className="font-bold mb-3">Productos (nombre fijo)</div>
+
+        <div className="space-y-2">
+          {items.map((it, idx) => (
             <div
-              key={o.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border bg-white/70 p-4"
+              key={`${it.productId}-${idx}`}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3"
             >
-              <div className="min-w-[260px]">
-                <div className="font-black">{o.folio}</div>
-                <div className="text-sm text-slate-700">{o.customerName}</div>
+              <div>
+                <div className="font-semibold">{it.name}</div>
+                <div className="text-xs text-slate-600">{it.productId}</div>
                 <div className="text-xs text-slate-500">
-                  Creado por: {o.createdBy} • {fmtDT(o.createdAt)}
-                  {o.updatedBy ? ` • Editado por: ${o.updatedBy} • ${fmtDT(o.updatedAt)}` : ""}
-                </div>
-                <div className="mt-1 text-xs text-slate-700">
-                  {DeliveryText(o)}
+                  Precio congelado: ${money(it.unitPrice)}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="hidden sm:block font-bold">
-                  {o.status}
-                </div>
-
-                <button
-                  onClick={() => openPdf(o.id)}
-                  className="rounded-2xl border px-4 py-2 font-semibold hover:bg-slate-50"
-                >
-                  PDF
-                </button>
-
-                <button
-                  onClick={() => router.push(`/pedidos/${o.id}`)}
-                  className="rounded-2xl border px-4 py-2 font-semibold hover:bg-slate-50"
-                >
-                  Editar
-                </button>
-
-                {/* ✅ SOLO ADMIN */}
-                {isAdmin && (
-                  <button
-                    onClick={() => askDelete(o.id, o.folio)}
-                    className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-2 font-semibold text-rose-700 hover:bg-rose-100"
-                  >
-                    Eliminar
-                  </button>
-                )}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-600">Qty</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-20 rounded-lg border p-2"
+                  value={it.qty}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setItems((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: v } : x)))
+                  }}
+                />
               </div>
+
+              <div className="font-bold">${money(it.unitPrice * it.qty)}</div>
             </div>
           ))}
         </div>
-      )}
 
-      <ConfirmModal
-        open={confirmOpen}
-        title="Eliminar pedido"
-        message={`¿Seguro que deseas eliminar el pedido ${deleteFolio ?? ""}? Esta acción lo marcará como eliminado.`}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        loading={deleting}
-        danger
-        onConfirm={onDeleteConfirmed}
-        onClose={() => {
-          if (deleting) return
-          setConfirmOpen(false)
-          setDeleteId(null)
-          setDeleteFolio(null)
-        }}
-      />
+        <div className="mt-4 flex items-center justify-between rounded-xl border bg-white p-3">
+          <div className="font-bold">Total</div>
+          <div className="font-black text-lg">${money(total)}</div>
+        </div>
+
+        <p className="mt-2 text-xs text-slate-600">
+          Nota: El nombre y precio de los productos en un pedido no se editan aquí.
+        </p>
+      </div>
+
+      <button
+        onClick={onSave}
+        disabled={saving || deleting}
+        className={[
+          "w-full rounded-2xl px-6 py-3 font-semibold text-white",
+          "bg-gradient-to-r from-sky-600 to-rose-600 hover:brightness-95",
+          saving ? "opacity-60" : "",
+        ].join(" ")}
+      >
+        {saving ? "Guardando..." : "Guardar cambios"}
+      </button>
     </section>
   )
 }
