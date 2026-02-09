@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
+import { useMemo, useState } from "react"
 
 type Props = {
   id: string
@@ -18,6 +18,14 @@ function money(n: number) {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function isSafeImg(src: string) {
+  if (!src) return false
+  // permite rutas locales y https
+  if (src.startsWith("/")) return true
+  if (src.startsWith("https://")) return true
+  return false
+}
+
 export default function ProductCard3D({
   id,
   name,
@@ -28,18 +36,22 @@ export default function ProductCard3D({
   stock,
   href,
 }: Props) {
+  const [imgOk, setImgOk] = useState(true)
+
+  const src = useMemo(() => (isSafeImg(image) ? image : ""), [image])
+
   return (
     <div className="rounded-3xl border bg-white shadow-sm overflow-hidden">
-      {/* Imagen: SIEMPRE con altura (clave para móvil) */}
+      {/* Imagen segura + fallback */}
       <div className="relative w-full h-36 sm:h-40 bg-slate-50">
-        {image ? (
-          <Image
-            src={image}
+        {src && imgOk ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
             alt={name}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain p-3"
-            priority={false}
+            className="h-full w-full object-contain p-3"
+            loading="lazy"
+            onError={() => setImgOk(false)}
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">
@@ -52,7 +64,6 @@ export default function ProductCard3D({
         </div>
       </div>
 
-      {/* Contenido */}
       <div className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -63,9 +74,7 @@ export default function ProductCard3D({
           <div className="shrink-0 font-bold">${money(price)}</div>
         </div>
 
-        <p className="mt-2 text-xs text-slate-600 line-clamp-2">
-          {description || "—"}
-        </p>
+        <p className="mt-2 text-xs text-slate-600 line-clamp-2">{description || "—"}</p>
 
         <Link
           href={href}
@@ -74,9 +83,7 @@ export default function ProductCard3D({
           Ver detalle
         </Link>
 
-        <div className="mt-2 text-[10px] text-slate-400 text-center break-all">
-          {id}
-        </div>
+        <div className="mt-2 text-[10px] text-slate-400 text-center break-all">{id}</div>
       </div>
     </div>
   )
