@@ -9,13 +9,7 @@ function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ")
 }
 
-function NavLink({
-  href,
-  label,
-}: {
-  href: string
-  label: string
-}) {
+function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname()
   const active = pathname === href || (href !== "/" && pathname.startsWith(href))
 
@@ -23,7 +17,7 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "relative text-sm font-medium transition",
+        "relative text-sm font-semibold transition",
         active ? "text-blue-900" : "text-slate-600 hover:text-blue-700"
       )}
     >
@@ -38,12 +32,12 @@ function NavLink({
 export default function Navbar() {
   return (
     <header className="sticky top-0 z-50">
-      <div className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 shadow-[0_10px_30px_-25px_rgba(2,6,23,0.35)]">
+      <div className="border-b border-slate-200 bg-white shadow-[0_10px_30px_-25px_rgba(15,23,42,0.25)]">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex items-center justify-between gap-3 py-3">
-            {/* Logo + nombre */}
+            {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-b from-blue-600 to-blue-800 shadow-[0_18px_35px_-20px_rgba(30,58,138,0.75)]" />
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-700 shadow-[0_14px_30px_-20px_rgba(37,99,235,0.55)]" />
               <div className="leading-tight">
                 <div className="text-[11px] tracking-widest text-slate-500">
                   OPERADORA
@@ -63,7 +57,7 @@ export default function Navbar() {
               {/* CTA rojo */}
               <Link
                 href="/generar-pedido"
-                className="ml-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-20px_rgba(220,38,38,0.8)] hover:bg-red-700 transition"
+                className="ml-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_-20px_rgba(220,38,38,0.6)] hover:bg-red-700 transition"
               >
                 Generar pedido
               </Link>
@@ -73,7 +67,7 @@ export default function Navbar() {
 
             {/* Search + icons */}
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-300 transition">
+              <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/25 focus-within:border-blue-300 transition">
                 <Search size={18} className="text-slate-500" />
                 <input
                   className="w-56 bg-transparent outline-none text-sm placeholder:text-slate-400"
@@ -84,12 +78,11 @@ export default function Navbar() {
               {/* Carrito */}
               <Link
                 href="/carrito"
-                className="relative rounded-2xl border border-slate-200 bg-white/80 p-2 shadow-sm hover:bg-slate-50 transition"
+                className="relative rounded-2xl border border-slate-200 bg-white p-2 shadow-sm hover:bg-slate-50 transition"
                 aria-label="Carrito"
                 title="Carrito"
               >
                 <ShoppingCart size={20} />
-                {/* badge (luego lo conectamos al contador real) */}
                 <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-red-600 px-1 text-[10px] leading-4 text-white text-center">
                   0
                 </span>
@@ -112,7 +105,7 @@ export default function Navbar() {
               <Link
                 key={i.href}
                 href={i.href}
-                className="whitespace-nowrap rounded-full border border-slate-200 bg-white/80 px-3 py-2 shadow-sm hover:border-blue-200 hover:bg-white transition"
+                className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm hover:border-blue-200 hover:bg-white transition"
               >
                 {i.label}
               </Link>
