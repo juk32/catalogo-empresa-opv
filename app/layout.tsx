@@ -10,6 +10,11 @@ export const metadata = {
   description: "Catálogo de productos",
 }
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -72,7 +77,7 @@ export default function RootLayout({
               </div>
 
               {/* Menu móvil */}
-              <div className="md:hidden pb-3 flex gap-3 text-sm overflow-x-auto">
+              <div className="md:hidden pb-3 flex gap-3 text-sm overflow-x-auto whitespace-nowrap">
                 <Link className="whitespace-nowrap hover:text-sky-700" href="/">
                   Inicio
                 </Link>
@@ -101,6 +106,7 @@ export default function RootLayout({
           <a
             href="https://wa.me/5217715565797"
             target="_blank"
+            rel="noreferrer"
             aria-label="WhatsApp"
             className="fixed bottom-5 right-5 z-50 transition hover:-translate-y-1"
           >

@@ -1,17 +1,20 @@
 import { prisma } from "@/lib/prisma"
 import ProductCard3D from "./ProductCard3D"
-import { unstable_noStore as noStore } from "next/cache"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-export const revalidate = 0
+type ProductRow = {
+  id: string
+  name: string
+  price: number
+  category: string
+  image: string
+  description: string
+  details: any
+  rating: number
+  stock: number
+}
 
 export default async function ProductosPage() {
-  noStore()
-
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-  })
+  const products = (await prisma.product.findMany()) as ProductRow[]
 
   return (
     <section className="space-y-6">
@@ -27,8 +30,8 @@ export default async function ProductosPage() {
       </div>
 
       <div className="rounded-[28px] border bg-white/70 p-3 shadow-sm backdrop-blur sm:p-4">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {products.map((p) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {products.map((p: ProductRow) => (
             <ProductCard3D
               key={p.id}
               id={p.id}
@@ -46,3 +49,4 @@ export default async function ProductosPage() {
     </section>
   )
 }
+
