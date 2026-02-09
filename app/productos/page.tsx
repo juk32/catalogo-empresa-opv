@@ -10,8 +10,6 @@ type ProductRow = {
   category: string
   image: string
   description: string
-  details: any
-  rating: number
   stock: number
   createdAt?: string
 }
@@ -44,31 +42,46 @@ export default function ProductosPage() {
   const [onlyStock, setOnlyStock] = useState(false)
 
   async function load() {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12000) // 12s
+
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch("/api/products", { cache: "no-store" })
+      // URL absoluta + cache buster (móvil-friendly)
+      const url = `${window.location.origin}/api/products?ts=${Date.now()}`
+
+      const res = await fetch(url, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+
       const data = await res.json().catch(() => null)
 
       if (!res.ok) {
         setProducts([])
-        setError((data as any)?.error || "Error cargando productos")
+        setError((data as any)?.error || `Error HTTP ${res.status}`)
         return
       }
 
       if (!Array.isArray(data)) {
         setProducts([])
-        setError("La API no devolvió un arreglo de productos")
+        setError("La API no devolvió un arreglo de productos.")
         return
       }
 
       setProducts(data as ProductRow[])
     } catch (e: any) {
-      console.error("ERROR cargando productos:", e)
+      console.error("ERROR fetch /api/products:", e)
       setProducts([])
-      setError(e?.message || "Error de red")
+      setError(
+        e?.name === "AbortError"
+          ? "La carga tardó demasiado (timeout)."
+          : e?.message || "Error de red"
+      )
     } finally {
+      clearTimeout(timeout)
       setLoading(false)
     }
   }
@@ -77,9 +90,7 @@ export default function ProductosPage() {
     load()
   }, [])
 
-  const categories = useMemo(() => {
-    return ["Todas", ...uniq(products.map((p) => p.category || ""))]
-  }, [products])
+  const categories = useMemo(() => ["Todas", ...uniq(products.map((p) => p.category || ""))], [products])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -93,7 +104,7 @@ export default function ProductosPage() {
 
   return (
     <section className="space-y-6">
-      {/* HERO / HEADER */}
+      {/* Header bonito */}
       <div className="rounded-3xl border bg-white/70 backdrop-blur shadow-sm overflow-hidden">
         <div className="px-4 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -128,7 +139,6 @@ export default function ProductosPage() {
             </button>
           </div>
 
-          {/* CONTROLES */}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-12">
             <div className="sm:col-span-6">
               <div className="flex items-center gap-2 rounded-2xl border bg-white px-3 py-2">
@@ -180,11 +190,10 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Separador suave */}
         <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
       </div>
 
-      {/* ESTADOS */}
+      {/* Estados */}
       {loading ? (
         <div className="rounded-[28px] border bg-white/70 p-3 sm:p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -197,52 +206,49 @@ export default function ProductosPage() {
         <div className="rounded-3xl border bg-white p-6">
           <div className="font-semibold text-rose-700">No se pudieron cargar los productos</div>
           <div className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{error}</div>
-          <button
-            onClick={load}
-            className="mt-4 rounded-2xl bg-black px-4 py-2 text-sm font-semibold text-white"
-          >
-            Reintentar
-          </button>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={load}
+              className="rounded-2xl bg-black px-4 py-2 text-sm font-semibold text-white"
+            >
+              Reintentar
+            </button>
+
+            <a
+              className="rounded-2xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+              href="/api/products"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir API
+            </a>
+          </div>
         </div>
       ) : (
-        <>
-          {/* GRID */}
-          <div className="rounded-[28px] border bg-white/70 p-3 shadow-sm backdrop-blur sm:p-4">
-            {filtered.length === 0 ? (
-              <div className="rounded-2xl border bg-white p-6 text-sm text-slate-600">
-                No hay resultados con los filtros actuales.
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      setQ("")
-                      setCat("Todas")
-                      setOnlyStock(false)
-                    }}
-                    className="rounded-2xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
-                  >
-                    Limpiar filtros
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map((p) => (
-                  <ProductCard3D
-                    key={p.id}
-                    id={p.id}
-                    name={p.name}
-                    category={p.category}
-                    image={p.image}
-                    description={p.description}
-                    price={p.price}
-                    stock={p.stock}
-                    href={`/producto/${p.id}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </>
+        <div className="rounded-[28px] border bg-white/70 p-3 shadow-sm backdrop-blur sm:p-4">
+          {filtered.length === 0 ? (
+            <div className="rounded-2xl border bg-white p-6 text-sm text-slate-600">
+              No hay resultados con los filtros actuales.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {filtered.map((p) => (
+                <ProductCard3D
+                  key={p.id}
+                  id={p.id}
+                  name={p.name}
+                  category={p.category}
+                  image={p.image}
+                  description={p.description}
+                  price={p.price}
+                  stock={p.stock}
+                  href={`/producto/${p.id}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </section>
   )
