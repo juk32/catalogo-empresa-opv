@@ -23,24 +23,44 @@ export default function ProductosPage() {
   const [q, setQ] = useState("")
 
   async function load() {
+    const controller = new AbortController()
+    const t = setTimeout(() => controller.abort(), 15000) // 15s timeout
+
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch("/api/products", { cache: "no-store" })
-      const data = await res.json().catch(() => ({}))
+      const res = await fetch("/api/products", {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
+        const msg = (data as any)?.error || `Error HTTP ${res.status}`
         setProducts([])
-        setError(data?.error || "No se pudo cargar productos")
+        setError(msg)
         return
       }
 
-      setProducts(Array.isArray(data) ? data : [])
+      if (!Array.isArray(data)) {
+        setProducts([])
+        setError("La API no devolvió un arreglo de productos.")
+        return
+      }
+
+      setProducts(data as ProductRow[])
     } catch (e: any) {
+      console.error("ERROR fetch /api/products:", e)
       setProducts([])
-      setError(e?.message || "Error de red")
+      setError(
+        e?.name === "AbortError"
+          ? "La carga tardó demasiado (timeout)."
+          : e?.message || "Error de red"
+      )
     } finally {
+      clearTimeout(t)
       setLoading(false)
     }
   }
@@ -87,7 +107,7 @@ export default function ProductosPage() {
       ) : error ? (
         <div className="rounded-2xl border bg-white p-6">
           <div className="font-semibold text-rose-700">No se pudo cargar</div>
-          <div className="mt-1 text-sm text-slate-600">{error}</div>
+          <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{error}</div>
           <button
             onClick={load}
             className="mt-4 rounded-2xl bg-black px-4 py-2 text-sm font-semibold text-white"
