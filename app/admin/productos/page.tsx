@@ -31,13 +31,13 @@ export default function AdminProductosPage() {
     setLoading(true)
     try {
       const res = await fetch("/api/products", { cache: "no-store" })
-      const data = await res.json()
+      const data = await res.json().catch(() => ([] as Product[]))
       if (!res.ok) {
-        alert(data?.error || "No se pudo cargar productos")
+        alert((data as any)?.error || "No se pudo cargar productos")
         setProducts([])
         return
       }
-      setProducts(data)
+      setProducts(data as Product[])
     } finally {
       setLoading(false)
     }
@@ -56,27 +56,34 @@ export default function AdminProductosPage() {
   }, [products, q])
 
   async function updateStock(id: string, stock: number) {
-    const res = await fetch(`/api/products/${id}`, {
+    // ✅ encodeURIComponent para IDs con guiones o caracteres raros
+    const res = await fetch(`/api/products/${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stock }),
     })
+
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      alert(data?.error || "No se pudo actualizar stock")
+      alert((data as any)?.error || "No se pudo actualizar stock")
       return
     }
+
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, stock } : p)))
   }
 
   async function remove(id: string) {
     if (!confirm("¿Seguro que quieres borrar este producto?")) return
-    const res = await fetch(`/api/products/${id}`, { method: "DELETE" })
+
+    // ✅ encodeURIComponent para IDs con guiones o caracteres raros
+    const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" })
     const data = await res.json().catch(() => ({}))
+
     if (!res.ok) {
-      alert(data?.error || "No se pudo borrar")
+      alert((data as any)?.error || "No se pudo borrar")
       return
     }
+
     setProducts((prev) => prev.filter((p) => p.id !== id))
   }
 
@@ -161,7 +168,7 @@ export default function AdminProductosPage() {
 
                   <div className="mt-4 flex gap-2">
                     <Link
-                      href={`/admin/productos/${p.id}/editar`}
+                      href={`/admin/productos/${encodeURIComponent(p.id)}/editar`}
                       className="flex-1 rounded-xl border px-3 py-2 text-center text-xs font-semibold hover:bg-slate-50"
                     >
                       Editar
@@ -219,7 +226,7 @@ export default function AdminProductosPage() {
 
                   <div className="col-span-3 flex justify-end gap-2">
                     <Link
-                      href={`/admin/productos/${p.id}/editar`}
+                      href={`/admin/productos/${encodeURIComponent(p.id)}/editar`}
                       className="rounded-xl border px-3 py-2 text-xs font-semibold hover:bg-slate-50"
                     >
                       Editar

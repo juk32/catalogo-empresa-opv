@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Product {
-  id          String  @id
+  id          String      @id
   name        String
   price       Float
   category    String
@@ -17,10 +17,9 @@ model Product {
   details     Json
   rating      Float
   stock       Int
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
   items       OrderItem[]
 }
 
@@ -30,75 +29,66 @@ model OrderCounter {
   updatedAt DateTime @updatedAt
 }
 
-enum OrderStatus {
-  PENDIENTE
-  ENTREGADO
-}
-
 model Order {
-  id            String      @id @default(cuid())
-  folioNumber   Int         @unique
-  folio         String      @unique
-  customerName  String
-  status        OrderStatus @default(PENDIENTE)
-
-  createdAt     DateTime    @default(now())
-  createdBy     String
-
-  updatedAt     DateTime    @updatedAt
-  updatedBy     String?
-
-  deliveredAt   DateTime?
-  deliveredBy   String?
-
-  deletedAt     DateTime?
-
-  // ✅ NUEVO: horario de entrega elegido (opcional)
-  deliveryAt    DateTime?
-
-  items         OrderItem[]
-  audits        OrderAudit[]
+  id           String       @id @default(cuid())
+  folioNumber  Int          @unique
+  folio        String       @unique
+  customerName String
+  status       OrderStatus  @default(PENDIENTE)
+  createdAt    DateTime     @default(now())
+  createdBy    String
+  updatedAt    DateTime     @updatedAt
+  updatedBy    String?
+  deliveredAt  DateTime?
+  deliveredBy  String?
+  deletedAt    DateTime?
+  deliveryAt   DateTime?
+  audits       OrderAudit[]
+  items        OrderItem[]
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  productId   String
-  name        String
-  unitPrice   Float
-  qty         Int
-  unit        String  @default("PZ")
-
-  order       Order   @relation(fields: [orderId], references: [id])
-  product     Product @relation(fields: [productId], references: [id])
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  name      String
+  unitPrice Float
+  qty       Int
+  unit      String  @default("PZ")
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
 }
 
 model OrderAudit {
-  id        String   @id @default(cuid())
-  orderId   String
-  action    String   // "CREATE" | "EDIT" | "DELETE" | "DELIVER"
-  byUser    String
-  at        DateTime @default(now())
-  note      String?
-
-  order     Order @relation(fields: [orderId], references: [id])
+  id      String   @id @default(cuid())
+  orderId String
+  action  String
+  byUser  String
+  at      DateTime @default(now())
+  note    String?
+  order   Order    @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
 }
+
 model DeliverySlot {
   id        String   @id @default(cuid())
   startAt   DateTime
   endAt     DateTime
   capacity  Int      @default(999)
   active    Boolean  @default(true)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([startAt])
   @@index([endAt])
   @@index([active])
+}
+
+enum OrderStatus {
+  PENDIENTE
+  ENTREGADO
 }
