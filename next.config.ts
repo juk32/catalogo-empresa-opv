@@ -1,10 +1,14 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  experimental: {
-    turbo: {
-      enabled: false,
-    },
+  // Si tienes imágenes externas (blob, etc.), puedes agregar dominios aquí
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
+      },
+    ],
   },
 }
 
