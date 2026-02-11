@@ -21,11 +21,75 @@ function formatMoney(n: number) {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/* =========================
+   Modal incrustado
+========================= */
+function ConfirmModal({
+  open,
+  title = "Confirmar acción",
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  danger = false,
+  onConfirm,
+  onCancel,
+  loading = false,
+}: {
+  open: boolean
+  title?: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  danger?: boolean
+  loading?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+      {/* Fondo */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        <h3 className="text-lg font-bold">{title}</h3>
+        <p className="mt-2 text-sm text-slate-600">{message}</p>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
+          >
+            {cancelText}
+          </button>
+
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
+              danger ? "bg-rose-600 hover:bg-rose-700" : "bg-slate-900 hover:bg-black"
+            }`}
+          >
+            {loading ? "Borrando..." : confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminProductosPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
   const [q, setQ] = useState("")
+
+  // ✅ Modal state
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -56,7 +120,6 @@ export default function AdminProductosPage() {
   }, [products, q])
 
   async function updateStock(id: string, stock: number) {
-    // ✅ encodeURIComponent para IDs con guiones o caracteres raros
     const res = await fetch(`/api/products/${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -72,19 +135,31 @@ export default function AdminProductosPage() {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, stock } : p)))
   }
 
-  async function remove(id: string) {
-    if (!confirm("¿Seguro que quieres borrar este producto?")) return
+  // ✅ Ya no usamos confirm() del navegador
+  function askRemove(id: string) {
+    setConfirmId(id)
+  }
 
-    // ✅ encodeURIComponent para IDs con guiones o caracteres raros
-    const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" })
-    const data = await res.json().catch(() => ({}))
+  async function removeConfirmed() {
+    if (!confirmId) return
+    setDeleting(true)
 
-    if (!res.ok) {
-      alert((data as any)?.error || "No se pudo borrar")
-      return
+    try {
+      const res = await fetch(`/api/products/${encodeURIComponent(confirmId)}`, {
+        method: "DELETE",
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        alert((data as any)?.error || "No se pudo borrar")
+        return
+      }
+
+      setProducts((prev) => prev.filter((p) => p.id !== confirmId))
+      setConfirmId(null)
+    } finally {
+      setDeleting(false)
     }
-
-    setProducts((prev) => prev.filter((p) => p.id !== id))
   }
 
   return (
@@ -175,7 +250,7 @@ export default function AdminProductosPage() {
                     </Link>
 
                     <button
-                      onClick={() => remove(p.id)}
+                      onClick={() => askRemove(p.id)}
                       className="flex-1 rounded-xl border px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"
                     >
                       Borrar
@@ -233,7 +308,7 @@ export default function AdminProductosPage() {
                     </Link>
 
                     <button
-                      onClick={() => remove(p.id)}
+                      onClick={() => askRemove(p.id)}
                       className="rounded-xl border px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"
                     >
                       Borrar
@@ -245,6 +320,19 @@ export default function AdminProductosPage() {
           </div>
         </>
       )}
+
+      {/* ✅ Modal bonito */}
+      <ConfirmModal
+        open={!!confirmId}
+        title="Eliminar producto"
+        message="Esta acción no se puede deshacer. ¿Seguro que deseas borrar este producto?"
+        confirmText="Sí, borrar"
+        cancelText="Cancelar"
+        danger
+        loading={deleting}
+        onCancel={() => setConfirmId(null)}
+        onConfirm={removeConfirmed}
+      />
     </section>
   )
 }
