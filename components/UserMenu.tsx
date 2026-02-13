@@ -74,7 +74,7 @@ export default function UserMenu() {
               Historial de pedidos
             </MenuLink>
 
-            <MenuLink href="/admin/catalogo" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
+            <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
               Administrar catálogo
             </MenuLink>
 

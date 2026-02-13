@@ -44,86 +44,122 @@ function Stars({ value }: { value: number }) {
 }
 
 /* =========================
-   Animación ligera (tablet/móvil friendly)
+   Card estilo "Hot deals" (UI only)
+   - NO cambia funcionalidad
 ========================= */
 function ProductCard({ p, i }: { p: Product; i: number }) {
   const stock = Number(p.stock ?? 0)
   const inStock = stock > 0
 
+  // UI-only (no afecta lógica): descuento y precio "antes"
+  const rating = Number(p.rating ?? 0)
+  const discountPct = Math.max(10, Math.min(35, Math.round(18 + (5 - Math.min(5, Math.max(0, rating))) * 4)))
+  const oldPrice = Math.round((p.price / (1 - discountPct / 100)) * 100) / 100
+
   return (
     <Link
       href={`/producto/${encodeURIComponent(p.id)}`}
-      className="card-anim group relative block overflow-hidden rounded-3xl border border-white/40 bg-white/35
-                 shadow-[0_30px_80px_-55px_rgba(0,0,0,0.7)]
-                 backdrop-blur-xl transition
-                 hover:-translate-y-1 hover:shadow-[0_40px_110px_-70px_rgba(0,0,0,0.8)]"
+      className="card-anim group relative block overflow-hidden rounded-3xl bg-white
+                 shadow-[0_18px_50px_-25px_rgba(15,23,42,0.35)]
+                 ring-1 ring-slate-200/70 transition
+                 hover:-translate-y-1 hover:shadow-[0_26px_70px_-30px_rgba(15,23,42,0.45)]"
       style={{ animationDelay: `${Math.min(i * 35, 280)}ms` }}
     >
-      {/* glow */}
-      <div className="pointer-events-none absolute -top-16 -left-16 h-40 w-40 rounded-full bg-sky-400/18 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-16 -right-16 h-40 w-40 rounded-full bg-rose-400/12 blur-3xl" />
+      {/* Imagen arriba */}
+      <div className="relative h-44 w-full overflow-hidden">
+        {/* fondo suave para que el producto resalte */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-100 to-white" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_20%_15%,rgba(56,189,248,.22),transparent_55%),radial-gradient(circle_at_85%_75%,rgba(244,63,94,.16),transparent_55%)]" />
 
-      <div className="relative p-4">
-        {/* Top */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-slate-900">{p.name}</h3>
-            <p className="mt-0.5 truncate text-xs text-slate-600">{p.category}</p>
+        {/* badge descuento */}
+        <div className="absolute left-4 top-4 z-10">
+          <span className="inline-flex items-center rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+            -{discountPct}%
+          </span>
+        </div>
+
+        {/* corazón (decorativo, no cambia funcionalidad) */}
+        <div className="absolute right-4 top-4 z-10">
+          <div
+            className="grid h-9 w-9 place-items-center rounded-full bg-white/95 ring-1 ring-slate-200/70
+                       shadow-sm transition group-hover:scale-[1.03]"
+            aria-hidden="true"
+          >
+            <span className="text-slate-700">♡</span>
           </div>
+        </div>
 
+        {/* stock pill abajo */}
+        <div className="absolute left-4 bottom-4 z-10">
           <span
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur
-            ${
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ring-1 ${
               inStock
-                ? "border-emerald-200/60 bg-emerald-50/60 text-emerald-800"
-                : "border-slate-200/70 bg-white/50 text-slate-700"
+                ? "bg-emerald-50 text-emerald-800 ring-emerald-200/70"
+                : "bg-slate-100 text-slate-700 ring-slate-200/70"
             }`}
           >
             {inStock ? `En stock (${stock})` : "Agotado"}
           </span>
         </div>
 
-        {/* ✅ Image (MEJORADA) */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-white/45 bg-white/60">
-          <div className="relative h-44 w-full">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/75 via-slate-50/40 to-slate-200/30" />
-            <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_30%_20%,rgba(56,189,248,.18),transparent_55%),radial-gradient(circle_at_70%_80%,rgba(244,63,94,.14),transparent_55%)]" />
-            <div className="pointer-events-none absolute -left-1/3 top-0 h-full w-2/3 rotate-12 bg-white/30 blur-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <div className="pointer-events-none absolute inset-0 ring-1 ring-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,.25)]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={safeImg(p.image)}
+          alt={p.name}
+          className="relative z-[1] h-full w-full object-contain p-6
+                     drop-shadow-[0_16px_30px_rgba(0,0,0,0.18)]
+                     transition duration-300 group-hover:scale-[1.04]"
+          loading="lazy"
+        />
+      </div>
 
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={safeImg(p.image)}
-              alt={p.name}
-              className="relative h-full w-full object-contain p-4
-                         drop-shadow-[0_18px_35px_rgba(0,0,0,0.20)]
-                         transition duration-300 group-hover:scale-[1.05]"
-              loading="lazy"
-            />
+      {/* Contenido */}
+      <div className="p-5">
+        {/* categoría mini */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-sky-700">
+          <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-50 ring-1 ring-sky-100">
+            ⚡
+          </span>
+          <span className="truncate">{p.category || "Sin categoría"}</span>
+        </div>
+
+        <h3 className="mt-2 line-clamp-2 text-[15px] font-extrabold tracking-tight text-slate-900">
+          {p.name}
+        </h3>
+
+        <p className="mt-1 text-xs text-slate-600">
+          ID: <span className="font-mono">{p.id}</span>
+        </p>
+
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500">Precio</p>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-black tracking-tight text-sky-700">
+                ${money(p.price)}
+              </div>
+              <div className="text-xs text-slate-400 line-through">${money(oldPrice)}</div>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            <div
+              className="rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white
+                         shadow-[0_10px_22px_-12px_rgba(2,132,199,0.9)]
+                         transition group-hover:brightness-110"
+            >
+              Ver ahora
+            </div>
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs text-slate-600">
-              <span className="font-mono">{p.id}</span>
-            </div>
-            <div className="text-lg font-black text-slate-900">${money(p.price)}</div>
-          </div>
-
+        <div className="mt-3">
           <Stars value={p.rating} />
-
-          <p className="line-clamp-2 text-sm text-slate-700">
-            {p.description || "Sin descripción."}
-          </p>
-
-          <div className="pt-2">
-            <div className="h-10 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white grid place-items-center text-sm font-semibold transition group-hover:brightness-110">
-              Ver detalle →
-            </div>
-          </div>
         </div>
+
+        <p className="mt-3 line-clamp-2 text-sm text-slate-700">
+          {p.description || "Sin descripción."}
+        </p>
       </div>
     </Link>
   )
@@ -131,21 +167,19 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-3xl border border-white/40 bg-white/35 p-4 backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2 min-w-0">
-          <div className="h-4 w-40 rounded bg-slate-200/70" />
-          <div className="h-3 w-24 rounded bg-slate-200/60" />
-        </div>
-        <div className="h-6 w-24 rounded-full bg-slate-200/60" />
+    <div className="animate-pulse overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200/70 shadow-[0_18px_50px_-25px_rgba(15,23,42,0.25)]">
+      <div className="relative h-44 bg-gradient-to-b from-slate-100 to-white">
+        <div className="absolute left-4 top-4 h-6 w-16 rounded-full bg-slate-200/80" />
+        <div className="absolute right-4 top-4 h-9 w-9 rounded-full bg-slate-200/70" />
+        <div className="absolute left-4 bottom-4 h-6 w-28 rounded-full bg-slate-200/80" />
       </div>
-      <div className="mt-4 h-44 rounded-2xl bg-slate-200/50" />
-      <div className="mt-4 space-y-2">
-        <div className="h-4 w-28 rounded bg-slate-200/70" />
-        <div className="h-3 w-24 rounded bg-slate-200/60" />
+      <div className="p-5 space-y-3">
+        <div className="h-4 w-36 rounded bg-slate-200/80" />
+        <div className="h-4 w-full rounded bg-slate-200/70" />
+        <div className="h-3 w-48 rounded bg-slate-200/60" />
+        <div className="h-8 w-40 rounded bg-slate-200/70" />
+        <div className="h-3 w-32 rounded bg-slate-200/60" />
         <div className="h-3 w-full rounded bg-slate-200/50" />
-        <div className="h-3 w-4/5 rounded bg-slate-200/50" />
-        <div className="mt-2 h-10 rounded-2xl bg-slate-200/60" />
       </div>
     </div>
   )

@@ -1,151 +1,183 @@
-import Image from "next/image"
 import Link from "next/link"
-
-
+import HomeSection from "@/components/HomeSections"
 
 export default function HomePage() {
   return (
-    <section className="space-y-8">
-      {/* HERO tipo mockup (con glow + 3D) */}
-      <div className="relative">
-        {/* Glow decorativo */}
-        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-300/40 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-indigo-300/30 blur-3xl" />
+    <main className="relative overflow-hidden">
+      {/* Fondo Apple Neon Clear */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        {/* Base blanca limpia */}
+        <div className="absolute inset-0 bg-white" />
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-sky-50 p-6 shadow-[0_18px_50px_-20px_rgba(2,132,199,0.45)] ring-1 ring-slate-900/5">
-          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
-            {/* Texto izquierda */}
-            <div className="space-y-4">
-              <h1 className="text-4xl font-bold text-slate-900">Bienvenido</h1>
+        {/* Glow superior elegante */}
+        <div className="absolute -top-40 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-cyan-300/30 blur-[120px]" />
+        <div className="absolute top-10 left-10 h-[400px] w-[400px] rounded-full bg-indigo-300/20 blur-[130px]" />
+        <div className="absolute top-20 right-10 h-[400px] w-[400px] rounded-full bg-fuchsia-300/20 blur-[130px]" />
+      </div>
 
-              <p className="max-w-xl text-slate-600">
-                En <span className="font-semibold">Operadora Balles</span> te
-                compartimos un catálogo claro y actualizado para que encuentres
-                productos fácilmente, revises su detalle y puedas generar tu
-                pedido en minutos. Nuestro objetivo es agilizar tu compra y
-                mejorar tu experiencia con un proceso simple y rápido.
+      {/* HERO */}
+      <section className="relative rounded-3xl border border-slate-200 bg-white/70 backdrop-blur-2xl shadow-[0_25px_70px_-25px_rgba(0,0,0,0.15)] overflow-hidden">
+        <div className="p-6 sm:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700">
+                Operadora Balles • Catálogo
+              </span>
+
+              <h1 className="mt-4 text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
+                Encuentra y explora tus{" "}
+                <span className="bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 bg-clip-text text-transparent">
+                  productos
+                </span>{" "}
+                favoritos
+              </h1>
+
+              <p className="mt-4 text-sm sm:text-base text-slate-600 max-w-xl">
+                Búsqueda rápida, detalle claro y una experiencia bonita en computadora y celular.
               </p>
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="mt-7 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/productos"
-                  className="rounded-2xl border border-white/70 bg-white/80 px-6 py-3 font-semibold shadow-[0_10px_25px_-15px_rgba(0,0,0,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_45px_-20px_rgba(0,0,0,0.35)]"
+                  className="rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white px-6 py-3 text-sm font-semibold shadow-lg transition hover:scale-[1.02] hover:shadow-[0_20px_45px_-15px_rgba(59,130,246,0.6)] text-center"
                 >
-                  Productos
+                  Ver productos
                 </Link>
-                <Link
-                  href="/generar-pedido"
-                  className="rounded-2xl border border-white/70 bg-white/80 px-6 py-3 font-semibold shadow-[0_10px_25px_-15px_rgba(0,0,0,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_45px_-20px_rgba(0,0,0,0.35)]"
-                >
-                  Generar pedido
-                </Link>
+
                 <Link
                   href="/contacto"
-                  className="rounded-2xl border border-white/70 bg-white/80 px-6 py-3 font-semibold shadow-[0_10px_25px_-15px_rgba(0,0,0,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_45px_-20px_rgba(0,0,0,0.35)]"
+                  className="rounded-2xl border border-slate-200 bg-white text-slate-800 px-6 py-3 text-sm font-semibold shadow-sm transition hover:bg-slate-50 hover:shadow-md text-center"
                 >
                   Contacto
                 </Link>
               </div>
+
+              {/* Barra tipo “chips” (opcional estética) */}
+              <div className="mt-7 flex flex-wrap gap-2">
+                <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-700">
+                  Búsqueda rápida
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-700">
+                  Móvil 2/1 columnas
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-700">
+                  Detalle claro
+                </span>
+              </div>
             </div>
 
-            {/* Imagen derecha */}
-            <div className="relative mx-auto w-full max-w-xl overflow-hidden rounded-3xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
-              <div className="relative h-72 w-full md:h-80">
-                <Image
-                  src="/public/file.svg"
-                  alt="Hero"
-                  fill
-                  className="object-contain"
-                  priority
-                />
+            {/* Tarjeta lateral (sin duplicar navbar) */}
+            <div className="rounded-3xl border border-slate-200 bg-white/70 backdrop-blur-2xl p-6 shadow-[0_18px_60px_-35px_rgba(15,23,42,0.25)]">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-900">Resumen</p>
+                <span className="text-xs text-slate-500">Actualizado</span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white/80 border border-slate-200 p-4 shadow-[0_12px_30px_-25px_rgba(2,6,23,0.18)]">
+                  <p className="text-xs text-slate-500">Productos</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">+100</p>
+                </div>
+                <div className="rounded-2xl bg-white/80 border border-slate-200 p-4 shadow-[0_12px_30px_-25px_rgba(2,6,23,0.18)]">
+                  <p className="text-xs text-slate-500">Categorías</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">Varias</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10 p-4">
+                <p className="text-xs text-slate-600">Tip</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  En móvil se adapta solo: 2 columnas cuando se puede y 1 cuando es necesario.
+                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Mini carrusel / ofertas (3 tarjetas) */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {[
-          { img: "/home/nutella.png", off: "20%", label: "producto", btn: "pedido" },
-          { img: "/home/canasta.jpg", off: "20%", label: "producto", btn: "pedido" },
-          { img: "/home/chocolate.png", off: "15%", label: "producto", btn: "pedido" },
-        ].map((c, idx) => (
-          <div
-            key={idx}
-            className="group flex items-center justify-between gap-4 rounded-3xl border border-white/60 bg-white/50 p-5 shadow-[0_14px_40px_-26px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_22px_60px_-30px_rgba(2,132,199,0.6)]"
-          >
-            <div className="space-y-2">
-              <div className="text-sm text-slate-600">{c.label}</div>
-              <div className="text-2xl font-bold">{c.off}</div>
-              <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm shadow-sm">
-                {c.btn}
-              </span>
-            </div>
+        {/* Línea inferior tipo Apple */}
+        <div className="h-1 w-full bg-gradient-to-r from-cyan-500/70 via-indigo-500/70 to-fuchsia-500/70 opacity-80" />
+      </section>
 
-            <div className="relative h-20 w-28 overflow-hidden rounded-2xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
-              <Image src={c.img} alt="Oferta" fill className="object-contain p-2" />
-            </div>
+      {/* SECCIONES con reveal */}
+      <div className="mt-6 sm:mt-8 grid gap-5 sm:gap-6">
+        <HomeSection
+          title="Lo más buscado"
+          subtitle="Secciones que aparecen suave al bajar."
+          delay={0}
+        >
+          <div className="grid gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+            {[
+              { t: "Lácteos", d: "Leches, cremas, etc." },
+              { t: "Abarrotes", d: "Básicos del día a día." },
+              { t: "Congelados", d: "Listo para cocina." },
+              { t: "Accesorios", d: "Extras y complementos." },
+            ].map((x) => (
+              <div
+                key={x.t}
+                className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-[0_12px_30px_-25px_rgba(2,6,23,0.18)] transition hover:-translate-y-1 hover:shadow-[0_22px_45px_-35px_rgba(2,6,23,0.28)]"
+              >
+                <p className="text-sm font-bold text-slate-900">{x.t}</p>
+                <p className="mt-1 text-xs text-slate-600">{x.d}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </HomeSection>
 
-      {/* Sección tipo “Aceite / Fruta” (tarjetas grandes) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Card grande izquierda */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_28px_80px_-45px_rgba(2,132,199,0.6)]">
-          <h2 className="text-2xl font-bold">Aceite</h2>
-          <p className="mt-2 text-slate-600">
-            Productos esenciales para cocina y preparación diaria. Calidad y
-            disponibilidad para tu operación.
-          </p>
-
-          <div className="relative mt-6 h-72 w-full overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
-            <Image
-              src="/home/barras.jpg"
-              alt="Aceite"
-              fill
-              className="object-contain p-6"
-            />
+        <HomeSection
+          title="¿Cómo funciona?"
+          subtitle="3 pasos simples, sin complicarte."
+          delay={80}
+        >
+          <div className="grid gap-3 lg:grid-cols-3">
+            {[
+              { n: "1", t: "Explora", d: "Busca por nombre o categoría." },
+              { n: "2", t: "Selecciona", d: "Entra a detalle y revisa stock." },
+              { n: "3", t: "Genera", d: "Arma tu pedido y compártelo." },
+            ].map((x) => (
+              <div
+                key={x.n}
+                className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-5 shadow-[0_18px_55px_-45px_rgba(2,6,23,0.22)]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-extrabold">
+                    {x.n}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{x.t}</p>
+                    <p className="text-xs text-slate-600">{x.d}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </HomeSection>
 
-        {/* Card grande derecha */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_28px_80px_-45px_rgba(2,132,199,0.6)]">
-          <h2 className="text-2xl font-bold">Fruta</h2>
-          <p className="mt-2 text-slate-600">
-            Selección de productos para surtido y consumo. Mantén tu inventario
-            al día con pedidos rápidos.
-          </p>
+        <HomeSection
+          title="Acciones rápidas"
+          subtitle="Botones grandes, cómodos en móvil."
+          delay={140}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/productos"
+              className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <p className="text-sm font-extrabold text-slate-900">Ir a productos →</p>
+              <p className="mt-1 text-xs text-slate-600">Catálogo completo</p>
+            </Link>
 
-          <div className="relative mt-6 h-72 w-full overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
-            <Image
-              src="/home/shampoo.jpg"
-              alt="Fruta"
-              fill
-              className="object-contain p-6"
-            />
+            <Link
+              href="/generar-pedido"
+              className="rounded-2xl bg-slate-900 text-white p-5 shadow transition hover:opacity-95 hover:shadow-[0_20px_55px_-35px_rgba(2,6,23,0.55)]"
+            >
+              <p className="text-sm font-extrabold">Generar pedido →</p>
+              <p className="mt-1 text-xs text-white/70">Arma tu lista rápido</p>
+            </Link>
           </div>
-        </div>
+        </HomeSection>
       </div>
 
-      {/* Otra sección grande (Barra) */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/55 p-6 shadow-[0_18px_55px_-35px_rgba(2,132,199,0.55)] ring-1 ring-slate-900/5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_28px_80px_-45px_rgba(2,132,199,0.6)]">
-        <h2 className="text-2xl font-bold">Barra</h2>
-        <p className="mt-2 text-slate-600">
-          Productos para snacks y consumo rápido. Ideal para surtido de mostrador
-          y pedidos frecuentes.
-        </p>
-
-        <div className="relative mt-6 h-80 w-full overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
-          <Image
-            src="/home/barras.jpg"
-            alt="Barra"
-            fill
-            className="object-contain p-6"
-          />
-        </div>
-      </div>
-    </section>
+      <div className="h-10" />
+    </main>
   )
 }
