@@ -15,9 +15,7 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
-// Rubber band (iOS-like). k controla “resistencia”
 function rubberBand(distance: number, dimension: number, k = 0.55) {
-  // distance > 0 (arrastrando hacia abajo)
   return (distance * dimension * k) / (dimension + k * distance)
 }
 
@@ -33,11 +31,14 @@ export default function UserMenu() {
   const [isMobile, setIsMobile] = useState(false)
   const [preferUp, setPreferUp] = useState(false)
 
+  // ✅ viewport state (NO window en render)
+  const [vw, setVw] = useState(1024)
+  const [vh, setVh] = useState(768)
+
   // Sheet drag state (mobile)
   const [dragY, setDragY] = useState(0)
   const draggingRef = useRef(false)
   const startYRef = useRef(0)
-  const startDragRef = useRef(0)
   const sheetScrollRef = useRef<HTMLDivElement | null>(null)
 
   // ⚠️ Ajusta esto a tu lógica real (auth)
@@ -46,9 +47,15 @@ export default function UserMenu() {
 
   useEffect(() => setMounted(true), [])
 
-  // Detecta móvil (sm < 640)
+  // ✅ medir viewport solo en cliente
   useEffect(() => {
-    const calc = () => setIsMobile(window.innerWidth < 640)
+    const calc = () => {
+      const w = window.innerWidth || 1024
+      const h = window.innerHeight || 768
+      setVw(w)
+      setVh(h)
+      setIsMobile(w < 640)
+    }
     calc()
     window.addEventListener("resize", calc)
     return () => window.removeEventListener("resize", calc)
@@ -61,7 +68,6 @@ export default function UserMenu() {
     setBtnRect({ top: r.top, bottom: r.bottom, left: r.left, right: r.right })
   }
 
-  // Recalcular posición al abrir
   useLayoutEffect(() => {
     if (!open) return
     computeBtnRect()
@@ -70,7 +76,6 @@ export default function UserMenu() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Recalcular en scroll/resize cuando esté abierto
   useEffect(() => {
     if (!open) return
     const onScroll = () => computeBtnRect()
@@ -81,10 +86,8 @@ export default function UserMenu() {
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", onResize)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Medir alto del panel
   useLayoutEffect(() => {
     if (!open) return
     const raf = requestAnimationFrame(() => {
@@ -94,7 +97,6 @@ export default function UserMenu() {
     return () => cancelAnimationFrame(raf)
   }, [open, isMobile])
 
-  // Decide si abre hacia arriba (desktop/tablet)
   useEffect(() => {
     if (!open) return
     if (isMobile) {
@@ -102,15 +104,13 @@ export default function UserMenu() {
       return
     }
     const margin = 12
-    const spaceBelow = window.innerHeight - btnRect.bottom
+    const spaceBelow = vh - btnRect.bottom
     const needsUp = panelH > 0 && spaceBelow < panelH + margin
     setPreferUp(needsUp)
-  }, [open, isMobile, btnRect.bottom, panelH])
+  }, [open, isMobile, btnRect.bottom, panelH, vh])
 
-  // Cerrar click afuera + Escape
   useEffect(() => {
     if (!open) return
-
     function onDown(e: MouseEvent) {
       const t = e.target as Node
       const root = rootRef.current
@@ -122,7 +122,6 @@ export default function UserMenu() {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false)
     }
-
     document.addEventListener("mousedown", onDown)
     document.addEventListener("keydown", onKey)
     return () => {
@@ -131,16 +130,10 @@ export default function UserMenu() {
     }
   }, [open])
 
-  // Reset drag on open/close
   useEffect(() => {
-    if (open) {
-      setDragY(0)
-    } else {
-      setDragY(0)
-    }
+    setDragY(0)
   }, [open])
 
-  // ===== Mobile drag handlers =====
   function canDragFromScrollTop() {
     const sc = sheetScrollRef.current
     if (!sc) return true
@@ -149,72 +142,57 @@ export default function UserMenu() {
 
   function onSheetPointerDown(e: React.PointerEvent) {
     if (!isMobile) return
-    // Solo permitir drag si scroll interno está arriba (evita conflicto)
     if (!canDragFromScrollTop()) return
-
     draggingRef.current = true
     startYRef.current = e.clientY
-    startDragRef.current = dragY
     ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
   }
 
   function onSheetPointerMove(e: React.PointerEvent) {
     if (!isMobile) return
     if (!draggingRef.current) return
-
     const delta = e.clientY - startYRef.current
     if (delta <= 0) {
-      // arrastre hacia arriba: no mover (o muy poquito)
       setDragY(0)
       return
     }
-
-    const dim = Math.max(320, window.innerHeight)
-    const rb = rubberBand(delta, dim, 0.6)
-    setDragY(rb)
+    const dim = Math.max(320, vh)
+    setDragY(rubberBand(delta, dim, 0.6))
   }
 
   function onSheetPointerUp() {
     if (!isMobile) return
     if (!draggingRef.current) return
     draggingRef.current = false
-
-    // Umbral: si arrastró bastante, cerrar
-    const threshold = Math.max(110, Math.min(180, window.innerHeight * 0.18))
+    const threshold = Math.max(110, Math.min(180, vh * 0.18))
     if (dragY > threshold) {
       setOpen(false)
       return
     }
-    // Si no, regresar
     setDragY(0)
   }
 
-  // Estilo desktop/tablet (dropdown pegado al botón)
+  // ✅ NO window en render
   const dropdownStyle = useMemo(() => {
     const margin = 12
-    const maxW = Math.min(340, Math.floor(window?.innerWidth ? window.innerWidth * 0.92 : 340))
+    const maxW = Math.min(340, Math.floor(vw * 0.92))
 
     let left = btnRect.right - maxW
     if (left < margin) left = margin
-    if (left + maxW > (window.innerWidth || maxW) - margin) {
-      left = (window.innerWidth || maxW) - maxW - margin
-    }
+    if (left + maxW > vw - margin) left = vw - maxW - margin
 
     const top = preferUp ? Math.max(margin, btnRect.top - panelH - 10) : Math.max(margin, btnRect.bottom + 10)
     return { left, top, width: maxW }
-  }, [btnRect.right, btnRect.bottom, btnRect.top, preferUp, panelH])
+  }, [btnRect.right, btnRect.bottom, btnRect.top, preferUp, panelH, vw])
 
-  // Overlay opacity reacts to drag (mobile)
   const overlayOpacity = useMemo(() => {
     if (!isMobile) return 1
-    // mientras más lo bajas, más transparente
-    const t = clamp(1 - dragY / (window.innerHeight * 0.6 || 600), 0.15, 1)
+    const t = clamp(1 - dragY / (vh * 0.6 || 600), 0.15, 1)
     return t
-  }, [dragY, isMobile])
+  }, [dragY, isMobile, vh])
 
   return (
     <div ref={rootRef} className="relative">
-      {/* Botón */}
       <button
         ref={btnRef}
         type="button"
@@ -233,11 +211,9 @@ export default function UserMenu() {
         <User size={18} className="text-slate-800" />
       </button>
 
-      {/* Portal */}
       {mounted && open
         ? createPortal(
             <>
-              {/* Overlay con blur fuerte (click cierra) */}
               <div
                 className="fixed inset-0 z-[9998] usermenu-overlay"
                 style={{ opacity: overlayOpacity }}
@@ -245,7 +221,6 @@ export default function UserMenu() {
                 aria-hidden="true"
               />
 
-              {/* ===== MOBILE: Bottom Sheet PRO ===== */}
               {isMobile ? (
                 <div className="fixed inset-x-0 bottom-0 z-[9999] px-3 pb-3">
                   <div
@@ -263,7 +238,6 @@ export default function UserMenu() {
                     role="dialog"
                     aria-modal="true"
                   >
-                    {/* Drag handle (zona de drag) */}
                     <div
                       className="cursor-grab active:cursor-grabbing select-none"
                       onPointerDown={onSheetPointerDown}
@@ -275,7 +249,6 @@ export default function UserMenu() {
                         <div className="h-1.5 w-12 rounded-full bg-slate-200" />
                       </div>
 
-                      {/* Head mini */}
                       <div className="px-3 pb-3">
                         <div className="rounded-2xl border border-white/45 bg-white/60 p-3">
                           <div className="text-sm font-bold text-slate-900">{userName}</div>
@@ -284,12 +257,7 @@ export default function UserMenu() {
                       </div>
                     </div>
 
-                    {/* Scroll interno (Apple feel) */}
-                    <div
-                      ref={sheetScrollRef}
-                      className="px-3 pb-3 overflow-y-auto"
-                      style={{ maxHeight: "calc(84vh - 112px)" }}
-                    >
+                    <div ref={sheetScrollRef} className="px-3 pb-3 overflow-y-auto" style={{ maxHeight: "calc(84vh - 112px)" }}>
                       <div className="grid gap-1">
                         <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
                           Historial de pedidos
@@ -315,28 +283,22 @@ export default function UserMenu() {
                         </button>
                       </div>
 
-                      {/* pequeño “fade” al final */}
                       <div className="pointer-events-none sticky bottom-0 h-10 bg-gradient-to-t from-white/90 to-transparent" />
                     </div>
                   </div>
 
                   <style>{`
-                    /* Overlay blur pro */
                     .usermenu-overlay{
                       background: rgba(2,6,23,.20);
                       backdrop-filter: blur(14px);
                       -webkit-backdrop-filter: blur(14px);
                       transition: opacity 180ms ease;
                     }
-
                     @keyframes sheetIn {
                       from { opacity: 0; transform: translateY(18px) scale(.985); }
                       to   { opacity: 1; transform: translateY(0) scale(1); }
                     }
-                    .usermenu-sheet{
-                      animation: sheetIn 180ms ease-out both;
-                    }
-
+                    .usermenu-sheet{ animation: sheetIn 180ms ease-out both; }
                     @media (prefers-reduced-motion: reduce) {
                       .usermenu-sheet { animation: none !important; }
                       .usermenu-overlay { transition: none !important; }
@@ -344,7 +306,6 @@ export default function UserMenu() {
                   `}</style>
                 </div>
               ) : (
-                /* ===== DESKTOP/TABLET: Dropdown + Flip ===== */
                 <div
                   ref={panelRef}
                   className={cx(
@@ -355,11 +316,7 @@ export default function UserMenu() {
                     preferUp ? "origin-bottom-right" : "origin-top-right",
                     "menu-in"
                   )}
-                  style={{
-                    top: dropdownStyle.top,
-                    left: dropdownStyle.left,
-                    width: dropdownStyle.width,
-                  }}
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width }}
                   role="dialog"
                   aria-modal="true"
                 >
@@ -405,7 +362,6 @@ export default function UserMenu() {
                       to   { opacity: 1; transform: translateY(0) scale(1); }
                     }
                     .menu-in { animation: ${preferUp ? "menuInUp" : "menuInDown"} 160ms ease-out both; }
-
                     @media (prefers-reduced-motion: reduce) {
                       .menu-in { animation: none !important; }
                     }
