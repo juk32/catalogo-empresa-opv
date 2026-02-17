@@ -65,6 +65,13 @@ export default function PedidosPage() {
   const [delivering, setDelivering] = useState(false)
   const [deliverErr, setDeliverErr] = useState<string | null>(null)
 
+  // ✅ Modal enviar WhatsApp
+  const [sendOpen, setSendOpen] = useState(false)
+  const [sendOrder, setSendOrder] = useState<OrderRow | null>(null)
+  const [sendPhones, setSendPhones] = useState("")
+  const [sending, setSending] = useState(false)
+  const [sendErr, setSendErr] = useState<string | null>(null)
+
   // ✅ Toast
   const [toast, setToast] = useState<ToastState>({
     open: false,
@@ -119,7 +126,6 @@ export default function PedidosPage() {
   }, [orders, q])
 
   function openDeliver(o: OrderRow) {
-    // ✅ Blindaje: si no viene id, no dejamos continuar
     if (!o?.id) {
       showToast(
         { type: "error", title: "Pedido sin id", message: "Tu /api/orders no está regresando el campo id." },
@@ -180,6 +186,87 @@ export default function PedidosPage() {
       showToast({ type: "error", title: "No se pudo entregar", message: msg }, 3200)
     } finally {
       setDelivering(false)
+    }
+  }
+
+  // ==========================
+  // ✅ Envío WhatsApp (link PDF)
+  // ==========================
+  function openSend(o: OrderRow) {
+    if (!o?.id) {
+      showToast(
+        { type: "error", title: "Pedido sin id", message: "Tu /api/orders no está regresando el campo id." },
+        3500
+      )
+      return
+    }
+    setSendErr(null)
+    setSendOrder(o)
+    setSendPhones("")
+    setSendOpen(true)
+  }
+
+  // ✅ Ruta relativa (safe en SSR)
+  function getPdfPath(orderId: string) {
+    return `/api/orders/${encodeURIComponent(orderId)}/pdf`
+  }
+
+  function getOriginSafe() {
+    if (typeof window === "undefined") return ""
+    return window.location.origin
+  }
+
+  function normalizePhone(v: string) {
+    return v.replace(/[^\d]/g, "")
+  }
+
+  function parsePhones(input: string) {
+    return input
+      .split(/,|\n/g)
+      .map((x) => normalizePhone(x.trim()))
+      .filter(Boolean)
+  }
+
+  async function confirmSendWhatsApp() {
+    setSendErr(null)
+    if (!sendOrder) return
+    if (!sendOrder.id) return setSendErr("Pedido sin id.")
+
+    const phones = parsePhones(sendPhones)
+    if (phones.length === 0) return setSendErr("Escribe al menos 1 número. Ej: 5217712345678")
+
+    setSending(true)
+
+    try {
+      const origin = getOriginSafe()
+      const pdfPath = getPdfPath(sendOrder.id)
+      const pdfUrl = origin ? `${origin}${pdfPath}` : pdfPath
+
+      const folio = sendOrder.folio || sendOrder.id
+      const text = `Operadora Balles - Pedido ${folio}\nCliente: ${sendOrder.customerName}\nPDF: ${pdfUrl}`
+
+      for (const phone of phones) {
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+        window.open(url, "_blank", "noopener,noreferrer")
+      }
+
+      showToast(
+        {
+          type: "success",
+          title: "WhatsApp listo ✅",
+          message: `Se abrieron ${phones.length} chat(s) con el link del PDF.`,
+        },
+        3200
+      )
+
+      setSendOpen(false)
+      setSendOrder(null)
+      setSendPhones("")
+    } catch (e: any) {
+      setSendErr(e?.message || "No se pudo preparar el envío")
+      showToast({ type: "error", title: "Error al enviar", message: e?.message || "Error" }, 3200)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -303,10 +390,101 @@ export default function PedidosPage() {
     )
   }
 
+  const SendModal = () => {
+    if (!sendOpen || !sendOrder) return null
+    const pdfPath = sendOrder?.id ? getPdfPath(sendOrder.id) : ""
+
+    return (
+      <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/30" onClick={() => (!sending ? setSendOpen(false) : null)} />
+
+        <div className="relative w-full max-w-lg rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_60px_rgba(2,6,23,0.25)]">
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-base font-semibold text-slate-900">Enviar pedido por WhatsApp</div>
+                <div className="mt-1 text-xs text-slate-600">
+                  Pedido: <b>{sendOrder.folio || sendOrder.id}</b> • Cliente: <b>{sendOrder.customerName}</b>
+                </div>
+                <div className="mt-1 text-xs text-slate-600">
+                  Se enviará el <b>link del PDF</b> del pedido.
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSendOpen(false)}
+                disabled={sending}
+                className={cn(
+                  "rounded-xl px-3 py-2 text-xs font-semibold",
+                  "border border-white/70 bg-white/70 hover:bg-white transition",
+                  sending ? "opacity-60 cursor-not-allowed" : ""
+                )}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">Número(s) destino</label>
+                <textarea
+                  value={sendPhones}
+                  onChange={(e) => setSendPhones(e.target.value)}
+                  placeholder={`Ej:\n5217712345678\n5215511122233\n\nO separados por coma:\n5217712345678, 5215511122233`}
+                  rows={4}
+                  className="mt-2 w-full rounded-xl border border-white/70 bg-white/70 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-300/50"
+                />
+                <div className="mt-1 text-xs text-slate-500">
+                  Tip: usa formato con LADA (MX: 52 + 1 + número). Ej: <b>5217712345678</b>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/70 bg-white/70 p-3 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
+                <span className="truncate">PDF del pedido:</span>
+                {pdfPath ? (
+                  <a
+                    href={pdfPath}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-slate-900 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Abrir PDF →
+                  </a>
+                ) : (
+                  <span className="text-slate-500">—</span>
+                )}
+              </div>
+
+              {sendErr && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                  {sendErr}
+                </div>
+              )}
+
+              <button
+                disabled={sending}
+                onClick={confirmSendWhatsApp}
+                className={cn(
+                  "w-full rounded-xl px-4 py-3 text-sm font-semibold text-white",
+                  "bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:brightness-95 transition",
+                  sending ? "opacity-60 cursor-not-allowed" : ""
+                )}
+              >
+                {sending ? "Preparando..." : "Enviar por WhatsApp"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <section className="relative space-y-4 sm:space-y-6">
       <Toast />
       <DeliverModal />
+      <SendModal />
 
       {/* Neon Clear background */}
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -353,7 +531,9 @@ export default function PedidosPage() {
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{error}</div>}
 
       {loading ? (
-        <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl p-4 text-slate-600">Cargando…</div>
+        <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl p-4 text-slate-600">
+          Cargando…
+        </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)] p-6 text-center">
           <div className="mx-auto mb-2 h-10 w-10 rounded-2xl bg-white/70 border border-white/70" />
@@ -393,6 +573,22 @@ export default function PedidosPage() {
                         <span className={cn("h-2 w-2 rounded-full", s.dot)} />
                         {s.label}
                       </div>
+
+                      <button
+                        disabled={!o.id}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          openSend(o)
+                        }}
+                        className={cn(
+                          "inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold",
+                          "border border-white/70 bg-white/70 hover:bg-white transition",
+                          !o.id ? "opacity-50 cursor-not-allowed" : ""
+                        )}
+                      >
+                        Enviar
+                      </button>
 
                       {o.status === "PENDIENTE" && (
                         <button
