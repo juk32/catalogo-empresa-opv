@@ -12,22 +12,24 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-
-/* =========================
-   ✅ color de fondo
-========================= */
-
-    --background: #ffffff;
-    --foreground: #000000;
-  }
-}
-
+/* ✅ Fondo global tipo “azulado pro” */
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+body {
   font-family: Arial, Helvetica, sans-serif;
+
+  /* Fondo pro (el tono de tu captura) */
+  background:
+    radial-gradient(1200px 520px at 50% -10%, rgba(56, 189, 248, 0.20), transparent 60%),
+    radial-gradient(900px 520px at 12% 20%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(900px 520px at 90% 25%, rgba(14, 165, 233, 0.10), transparent 60%),
+    #ffffff;
+
+  background-attachment: fixed;
 }
 
 /* =========================
@@ -50,6 +52,200 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .page-in {
+    animation: none !important;
+  }
+}
+
+
+/* =========================
+   NEON RED PACK (Home + Cards + Animaciones)
+========================= */
+
+/* base surface premium (no blanco plano) */
+.card-neon {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.90);
+  box-shadow:
+    0 18px 55px -45px rgba(2, 6, 23, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+  backdrop-filter: blur(18px);
+}
+
+/* HERO: más depth + glow */
+.hero-neon {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  box-shadow:
+    0 28px 90px -70px rgba(2, 6, 23, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.60) inset;
+  backdrop-filter: blur(22px);
+}
+
+/* neon text (azul→rojo) */
+.neon-text {
+  background: linear-gradient(90deg, rgba(56,189,248,1), rgba(99,102,241,1), rgba(244,63,94,0.98));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 10px 28px rgba(244,63,94,0.12);
+}
+
+/* chips */
+.chip-neon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226,232,240,0.9);
+  background: rgba(255,255,255,0.75);
+  padding: 4px 12px;
+  font-size: 12px;
+  color: rgb(51 65 85);
+  box-shadow: 0 10px 24px -20px rgba(244,63,94,0.25);
+}
+
+/* CTAs */
+.cta-neon {
+  border-radius: 16px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(90deg, rgba(56,189,248,1), rgba(99,102,241,1), rgba(244,63,94,0.98));
+  box-shadow:
+    0 22px 55px -35px rgba(99,102,241,0.65),
+    0 10px 30px -25px rgba(244,63,94,0.40);
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+  display: inline-flex;
+  justify-content: center;
+}
+.cta-neon:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow:
+    0 30px 75px -55px rgba(244,63,94,0.55),
+    0 18px 48px -38px rgba(56,189,248,0.55);
+}
+
+.cta-ghost-neon {
+  border-radius: 16px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgb(30 41 59);
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow: 0 12px 28px -22px rgba(2,6,23,0.30);
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  display: inline-flex;
+  justify-content: center;
+}
+.cta-ghost-neon:hover {
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 18px 40px -28px rgba(2,6,23,0.35);
+  transform: translateY(-1px);
+}
+
+.cta-dark-neon {
+  color: white;
+  background: rgba(15,23,42,0.92);
+  border: 1px solid rgba(15,23,42,0.9);
+  box-shadow:
+    0 22px 60px -45px rgba(2,6,23,0.60),
+    0 12px 30px -26px rgba(244,63,94,0.28);
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+.cta-dark-neon:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 30px 85px -62px rgba(2,6,23,0.80),
+    0 18px 55px -48px rgba(244,63,94,0.38);
+}
+
+/* ========== ANIMACIONES NEON ========== */
+
+/* borde neon animado */
+.neon-border-anim {
+  position: relative;
+}
+.neon-border-anim::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from 180deg,
+    rgba(56,189,248,0.55),
+    rgba(99,102,241,0.30),
+    rgba(244,63,94,0.45),
+    rgba(56,189,248,0.55)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  filter: drop-shadow(0 16px 36px rgba(244,63,94,0.16));
+  animation: neonSpin 7.5s linear infinite;
+}
+@keyframes neonSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* orbs animados (se ven bien en móvil) */
+.neon-orbs {
+  background:
+    radial-gradient(520px 300px at 20% 10%, rgba(56,189,248,0.20), transparent 60%),
+    radial-gradient(520px 320px at 86% 14%, rgba(244,63,94,0.16), transparent 62%),
+    radial-gradient(560px 340px at 55% 40%, rgba(99,102,241,0.12), transparent 65%),
+    radial-gradient(520px 320px at 15% 70%, rgba(244,63,94,0.10), transparent 66%);
+  filter: blur(0px);
+  animation: orbDrift 10s ease-in-out infinite;
+}
+@keyframes orbDrift {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: 1; }
+  50% { transform: translate3d(0,-10px,0) scale(1.01); opacity: .98; }
+}
+
+/* sweep brillo suave */
+.neon-sweep {
+  background:
+    radial-gradient(680px 220px at 20% 15%, rgba(255,255,255,0.65), transparent 60%),
+    radial-gradient(520px 220px at 90% 30%, rgba(255,255,255,0.40), transparent 62%);
+  opacity: 0.42;
+  animation: sweep 6s ease-in-out infinite;
+}
+@keyframes sweep {
+  0%,100% { transform: translateX(0); }
+  50% { transform: translateX(10px); }
+}
+
+/* scanline super sutil */
+.scanline {
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(15,23,42,0.04) 0px,
+    rgba(15,23,42,0.04) 1px,
+    transparent 10px,
+    transparent 16px
+  );
+  mix-blend-mode: soft-light;
+}
+
+/* float suave (ya lo tienes, lo mejoro un poco) */
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.soft-float { animation: softFloat 6.5s ease-in-out infinite; }
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .neon-border-anim::after,
+  .neon-orbs,
+  .neon-sweep,
+  .soft-float {
     animation: none !important;
   }
 }
