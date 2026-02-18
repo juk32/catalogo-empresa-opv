@@ -1,262 +1,243 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 
-function cx(...s: Array<string | false | null | undefined>) {
+function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ")
 }
 
-export default function Navbar() {
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-
-  const links = useMemo(
-    () => [
-      { href: "/", label: "Inicio" },
-      { href: "/productos", label: "Catálogo" },
-      { href: "/generar-pedido", label: "Generar Pedido" },
-      { href: "/contacto", label: "Contacto" },
-      { href: "/carrito", label: "Carrito" },
-    ],
-    []
+function IconCart(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M6.5 6h15l-1.6 8.2a2 2 0 0 1-2 1.6H9.1a2 2 0 0 1-2-1.7L5.4 3.8A1.5 1.5 0 0 0 3.9 2.5H2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+        fill="currentColor"
+      />
+    </svg>
   )
+}
 
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/"
-    return pathname?.startsWith(href)
-  }
+function IconUser(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M20 21a8 8 0 0 0-16 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 13a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+const navItems = [
+  { href: "/", label: "Inicio" },
+  { href: "/nosotros", label: "Nosotros" },
+  { href: "/productos", label: "Catálogo" },
+  { href: "/contacto", label: "Contacto" },
+]
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false)
+  const [q, setQ] = useState("")
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  const glow = useMemo(
+    () =>
+      scrolled
+        ? "bg-white/70 border-white/40 shadow-[0_16px_60px_-30px_rgba(15,23,42,.55)]"
+        : "bg-white/55 border-white/30 shadow-[0_20px_70px_-40px_rgba(15,23,42,.45)]",
+    [scrolled]
+  )
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Glow detrás del navbar (azul + rojo) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24">
-        <div className="absolute left-1/2 top-0 h-24 w-[980px] -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl" />
-        <div className="absolute right-8 top-2 h-24 w-72 rounded-full bg-rose-300/18 blur-3xl" />
+      {/* Soft neon background */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24">
+        <div className="mx-auto h-full max-w-7xl px-4">
+          <div className="relative h-full">
+            <div className="absolute -left-20 -top-14 h-40 w-40 rounded-full bg-sky-300/25 blur-3xl" />
+            <div className="absolute left-1/3 -top-16 h-44 w-44 rounded-full bg-fuchsia-300/20 blur-3xl" />
+            <div className="absolute right-0 -top-14 h-40 w-40 rounded-full bg-emerald-300/20 blur-3xl" />
+          </div>
+        </div>
       </div>
 
-      <div className="border-b border-white/45 bg-white/60 backdrop-blur-xl shadow-[0_18px_45px_-35px_rgba(2,6,23,0.35)]">
-        {/* Línea neon animada superior */}
-        <div className="h-[2px] w-full neon-topline" />
+      <div className="mx-auto max-w-7xl px-4 pt-3">
+        <motion.div
+          layout
+          className={cn(
+            "relative flex items-center gap-3 rounded-2xl border backdrop-blur-xl",
+            glow
+          )}
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          {/* Animated border shimmer */}
+          <div className="pointer-events-none absolute inset-0 rounded-2xl">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+          </div>
 
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          {/* Logo */}
-          <Link href="/" className="group flex items-center gap-3">
-            <div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-500 via-indigo-600 to-rose-500 shadow-[0_18px_40px_-24px_rgba(244,63,94,0.55)]">
-              <div className="absolute inset-0 rounded-2xl ring-1 ring-white/50" />
+          {/* Brand */}
+          <Link
+            href="/"
+            className="group flex items-center gap-3 px-4 py-3"
+            aria-label="Operadora Balles"
+          >
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-fuchsia-400 to-emerald-400" />
+              <motion.div
+                className="absolute inset-0 opacity-60"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                style={{
+                  background:
+                    "conic-gradient(from 180deg, rgba(255,255,255,.0), rgba(255,255,255,.45), rgba(255,255,255,.0))",
+                }}
+              />
             </div>
-
             <div className="leading-tight">
-              <div className="text-xs font-semibold tracking-wide text-slate-600">OPERADORA</div>
-              <div className="text-sm font-black tracking-wide text-slate-900">
+              <div className="text-[11px] font-semibold tracking-widest text-slate-500">
+                OPERADORA
+              </div>
+              <div className="text-sm font-bold tracking-wide text-slate-900">
                 BALLES{" "}
-                <span className="ml-1 text-[10px] font-semibold text-slate-500 group-hover:text-rose-500 transition">
+                <span className="text-xs font-semibold text-slate-500">
                   • Neon
                 </span>
               </div>
             </div>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1 rounded-2xl border border-white/55 bg-white/55 px-2 py-2 shadow-sm backdrop-blur relative">
-            {/* borde neon animado sutil */}
-            <div className="pointer-events-none absolute inset-0 rounded-2xl neon-border" />
-
-            {links.map((l) => {
-              const active = isActive(l.href)
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={cx(
-                    "relative rounded-xl px-3 py-2 text-sm font-semibold transition",
-                    active
-                      ? "text-white bg-slate-900 shadow-[0_14px_30px_-18px_rgba(0,0,0,.55)]"
-                      : "text-slate-800 hover:bg-white/70"
-                  )}
-                >
-                  {l.label}
-
-                  {/* underline neon si activo */}
-                  {active ? (
-                    <span className="pointer-events-none absolute left-2 right-2 -bottom-[6px] h-[2px] rounded-full neon-underline" />
-                  ) : null}
-                </Link>
-              )
-            })}
+          {/* Nav */}
+          <nav className="hidden flex-1 items-center justify-center md:flex">
+            <div className="flex items-center gap-2 rounded-full border border-white/40 bg-white/55 px-2 py-1 backdrop-blur">
+              {navItems.map((it) => (
+                <NavLink key={it.href} href={it.href} label={it.label} />
+              ))}
+            </div>
           </nav>
 
-          {/* Right tools */}
-          <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="hidden md:flex items-center gap-2 rounded-2xl border border-white/55 bg-white/55 px-3 py-2 backdrop-blur relative shadow-sm search-wrap">
-              <span className="text-slate-400">🔎</span>
+          {/* Search */}
+          <div className="ml-auto flex items-center gap-2 pr-3">
+            <div className="relative hidden w-[340px] md:block">
+              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
               <input
-                placeholder="Buscar…"
-                className="w-56 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full rounded-full border border-white/50 bg-white/70 px-10 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-200 focus:shadow-[0_0_0_4px_rgba(56,189,248,.15)]"
               />
-              <span className="pointer-events-none search-glow" />
+              <AnimatePresence>
+                {q?.length > 0 && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setQ("")}
+                    className="absolute inset-y-0 right-2 my-auto rounded-full px-3 text-xs font-semibold text-slate-600 hover:bg-white/70"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    Limpiar
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Icons */}
-            <Link
-              href="/carrito"
-              className="icon-neon grid h-10 w-10 place-items-center rounded-2xl border border-white/55 bg-white/55 text-slate-900 backdrop-blur transition"
-              aria-label="Carrito"
-              title="Carrito"
+            {/* Actions */}
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
             >
-              🛒
-            </Link>
-
-            <Link
-              href="/login"
-              className="icon-neon grid h-10 w-10 place-items-center rounded-2xl border border-white/55 bg-white/55 text-slate-900 backdrop-blur transition"
-              aria-label="Usuario"
-              title="Usuario"
-            >
-              👤
-            </Link>
-
-            {/* Mobile button */}
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              className="lg:hidden icon-neon grid h-10 w-10 place-items-center rounded-2xl border border-white/55 bg-white/55 text-slate-900 backdrop-blur transition"
-              aria-label="Menú"
-            >
-              {open ? "✕" : "☰"}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu */}
-        {open && (
-          <div className="lg:hidden border-t border-white/45 bg-white/55 backdrop-blur-xl">
-            <div className="mx-auto max-w-6xl px-4 py-3 space-y-2">
-              <div className="relative flex items-center gap-2 rounded-2xl border border-white/55 bg-white/55 px-3 py-2 shadow-sm search-wrap">
-                <span className="text-slate-400">🔎</span>
-                <input
-                  placeholder="Buscar…"
-                  className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500"
+              <Link
+                href="/pedido"
+                className="group relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/40 bg-white/60 backdrop-blur transition hover:bg-white/80"
+                aria-label="Carrito"
+              >
+                <span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition group-hover:opacity-100"
+                  style={{
+                    background:
+                      "radial-gradient(120px 60px at 50% 0%, rgba(56,189,248,.22), transparent 55%)",
+                  }}
                 />
-                <span className="pointer-events-none search-glow" />
-              </div>
+                <IconCart className="h-5 w-5 text-slate-800" />
+              </Link>
 
-              <div className="grid gap-2">
-                {links.map((l) => {
-                  const active = isActive(l.href)
-                  return (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      onClick={() => setOpen(false)}
-                      className={cx(
-                        "relative rounded-2xl border border-white/55 bg-white/55 px-4 py-3 text-sm font-semibold text-slate-900 backdrop-blur transition hover:bg-white/70",
-                        active && "bg-slate-900 text-white border-slate-900"
-                      )}
-                    >
-                      {l.label}
-                      {active ? (
-                        <span className="pointer-events-none absolute inset-x-4 bottom-2 h-[2px] rounded-full neon-underline" />
-                      ) : null}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
+              <Link
+                href="/login"
+                className="group relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/40 bg-white/60 backdrop-blur transition hover:bg-white/80"
+                aria-label="Usuario"
+              >
+                <span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition group-hover:opacity-100"
+                  style={{
+                    background:
+                      "radial-gradient(120px 60px at 50% 0%, rgba(232,121,249,.18), transparent 55%)",
+                  }}
+                />
+                <IconUser className="h-5 w-5 text-slate-800" />
+              </Link>
+            </motion.div>
           </div>
-        )}
+        </motion.div>
       </div>
-
-      {/* CSS local (neon + anim) */}
-      <style>{`
-        /* Top line animada (cyan -> indigo -> red) */
-        .neon-topline{
-          background: linear-gradient(90deg,
-            rgba(56,189,248,.55),
-            rgba(99,102,241,.25),
-            rgba(244,63,94,.45),
-            rgba(56,189,248,.55)
-          );
-          background-size: 200% 200%;
-          animation: neonShift 4.6s ease-in-out infinite;
-          filter: drop-shadow(0 10px 18px rgba(244,63,94,.18));
-        }
-
-        /* Border animado del nav */
-        .neon-border{
-          border-radius: 16px;
-          padding: 1px;
-          background: conic-gradient(from 180deg,
-            rgba(56,189,248,.45),
-            rgba(99,102,241,.22),
-            rgba(244,63,94,.38),
-            rgba(56,189,248,.45)
-          );
-          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          opacity: .55;
-          animation: neonSpin 8s linear infinite;
-        }
-
-        /* underline neon */
-        .neon-underline{
-          background: linear-gradient(90deg,
-            rgba(56,189,248,.9),
-            rgba(99,102,241,.6),
-            rgba(244,63,94,.9)
-          );
-          background-size: 200% 200%;
-          animation: neonShift 3.4s ease-in-out infinite;
-          box-shadow: 0 12px 28px -18px rgba(244,63,94,.55);
-        }
-
-        @keyframes neonShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes neonSpin {
-          to { transform: rotate(360deg); }
-        }
-
-        /* Search glow al focus */
-        .search-wrap{ position: relative; }
-        .search-glow{
-          position: absolute;
-          inset: -2px;
-          border-radius: 18px;
-          opacity: 0;
-          transition: opacity 180ms ease;
-          background:
-            radial-gradient(140px 60px at 28% 50%, rgba(56,189,248,.35), transparent 65%),
-            radial-gradient(140px 60px at 78% 50%, rgba(244,63,94,.30), transparent 65%);
-          filter: blur(10px);
-          z-index: -1;
-        }
-        .search-wrap:focus-within .search-glow{
-          opacity: 1;
-        }
-
-        /* Icons hover neon */
-        .icon-neon{
-          transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
-        }
-        .icon-neon:hover{
-          transform: translateY(-1px);
-          background: rgba(255,255,255,.72);
-          border-color: rgba(226,232,240,.9);
-          box-shadow:
-            0 18px 40px -28px rgba(2,6,23,.35),
-            0 14px 30px -26px rgba(244,63,94,.22);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .neon-topline, .neon-border, .neon-underline { animation: none !important; }
-        }
-      `}</style>
     </header>
+  )
+}
+
+function NavLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="relative rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:text-slate-900"
+    >
+      <span className="relative z-10">{label}</span>
+      <motion.span
+        className="absolute inset-x-2 -bottom-[2px] h-[2px] rounded-full bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-400 opacity-0"
+        whileHover={{ opacity: 1, scaleX: 1 }}
+        initial={{ scaleX: 0.6 }}
+        transition={{ duration: 0.18 }}
+      />
+    </Link>
   )
 }
