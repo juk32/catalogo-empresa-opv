@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
 /* =======================
    Helpers
@@ -27,9 +27,6 @@ type PanelSlide = {
   items: Item[]
 }
 
-/* =======================
-   PRIME-LIKE HERO SLIDER (Neon Clear)
-======================= */
 type HeroSlide = {
   id: string
   title: string
@@ -41,17 +38,23 @@ type HeroSlide = {
 }
 
 /* =======================
-   FullBleed: rompe el max-width del layout
-   (si tu RootLayout tiene main max-w-6xl)
+   FullBleed (sin recortes)
+   - evita el “left shift”
 ======================= */
 function FullBleed({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw]">
-      {children}
+    <div className="relative w-full">
+      {/* 100vw centrado */}
+      <div className="relative left-1/2 w-[100vw] -translate-x-1/2">{children}</div>
     </div>
   )
 }
 
+/* =======================
+   HERO SLIDER (centrado + grande)
+   - SIN recorte a la izquierda
+   - Responsive real (móvil / desktop)
+======================= */
 function PrimeHeroSlider({
   slides,
   autoPlay = true,
@@ -89,142 +92,143 @@ function PrimeHeroSlider({
   }
 
   return (
-    <section className="w-screen pt-3 sm:pt-5">
+    // ✅ IMPORTANTÍSIMO: centrado con max-w y padding propio
+    <section className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5">
       <div className="relative">
-        {/* Glow exterior */}
+        {/* glow */}
         <div className="pointer-events-none absolute -inset-10 -z-10 rounded-[44px] bg-gradient-to-r from-sky-200/30 via-blue-200/18 to-cyan-200/25 blur-3xl" />
 
-        {/* Contenedor real (margen bonito en móvil/desktop) */}
+        {/* ✅ SIN px internos (evita recortes raros) */}
         <div
-          className="relative overflow-hidden rounded-[26px] sm:rounded-[34px]
+          className="relative overflow-hidden rounded-[22px] sm:rounded-[34px]
                      bg-white/55 backdrop-blur ring-1 ring-slate-200
-                     shadow-[0_60px_160px_-105px_rgba(15,23,42,.70)]
-                     mx-3 sm:mx-6 lg:mx-10"
+                     shadow-[0_60px_160px_-105px_rgba(15,23,42,.70)]"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          <motion.div
-            className="flex"
-            animate={{ x: `-${index * 100}%` }}
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
-            style={{ width: `${count * 100}%` }}
-          >
-            {slides.map((s) => (
-              <div
-                key={s.id}
-                className="
-                  relative w-full shrink-0
-                  h-[320px]
-                  sm:h-[460px]
-                  lg:h-[560px]
-                  xl:h-[640px]
-                "
-              >
-                {/* Imagen */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="relative overflow-hidden rounded-[22px] sm:rounded-[34px]">
+            <motion.div
+              className="flex"
+              animate={{ x: `-${index * 100}%` }}
+              transition={{ type: "spring", stiffness: 260, damping: 30 }}
+              style={{ width: `${count * 100}%` }}
+            >
+              {slides.map((s) => (
+                <div
+                  key={s.id}
+                  className="
+                    relative w-full shrink-0
+                    h-[320px]
+                    sm:h-[480px]
+                    lg:h-[620px]
+                    xl:h-[700px]
+                  "
+                >
+                  {/* bg image */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
 
-                {/* Overlay: más fuerte en móvil */}
-                <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/72 to-white/25 sm:from-white/88 sm:via-white/60 sm:to-white/20" />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent sm:from-white/70" />
+                  {/* overlays */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/72 to-white/25 sm:from-white/88 sm:via-white/60 sm:to-white/20" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent sm:from-white/70" />
 
-                {/* Neon blobs */}
-                <div className="pointer-events-none absolute -left-24 -top-20 h-72 w-72 rounded-full bg-sky-300/22 blur-3xl" />
-                <div className="pointer-events-none absolute left-1/3 -top-24 h-72 w-72 rounded-full bg-indigo-300/16 blur-3xl" />
-                <div className="pointer-events-none absolute right-0 -top-20 h-72 w-72 rounded-full bg-cyan-300/16 blur-3xl" />
+                  {/* blobs */}
+                  <div className="pointer-events-none absolute -left-24 -top-20 h-72 w-72 rounded-full bg-sky-300/22 blur-3xl" />
+                  <div className="pointer-events-none absolute left-1/3 -top-24 h-72 w-72 rounded-full bg-indigo-300/16 blur-3xl" />
+                  <div className="pointer-events-none absolute right-0 -top-20 h-72 w-72 rounded-full bg-cyan-300/16 blur-3xl" />
 
-                {/* Content */}
-                <div className="relative z-10 flex h-full items-center">
-                  <div className="w-full px-5 sm:px-12 lg:px-16">
-                    <div className="max-w-[38rem]">
-                      {s.badge ? (
-                        <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/85 px-3 py-1.5 text-[11px] sm:text-xs font-extrabold text-slate-700 shadow-sm">
-                          <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-extrabold text-sky-700">
-                            Neon
-                          </span>
-                          {s.badge}
+                  {/* content */}
+                  <div className="relative z-10 flex h-full items-center">
+                    <div className="w-full px-4 sm:px-10 lg:px-14">
+                      <div className="max-w-[42rem] text-center sm:text-left">
+                        {s.badge ? (
+                          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/85 px-3 py-1.5 text-[11px] sm:text-xs font-extrabold text-slate-700 shadow-sm">
+                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-extrabold text-sky-700">
+                              Neon
+                            </span>
+                            {s.badge}
+                          </div>
+                        ) : null}
+
+                        <h2 className="mt-4 text-[30px] leading-[1.05] font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+                          {s.title}
+                        </h2>
+
+                        <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base mx-auto sm:mx-0">
+                          {s.subtitle}
+                        </p>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                          <Link
+                            href={s.ctaHref}
+                            className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-[0_18px_45px_-25px_rgba(2,132,199,.6)]"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, rgba(56,189,248,.95), rgba(37,99,235,.92))",
+                            }}
+                          >
+                            {s.ctaText} <span className="ml-2">→</span>
+                          </Link>
+
+                          <Link
+                            href="/contacto"
+                            className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl border border-white/60 bg-white/70 px-6 py-3 text-sm sm:text-base font-extrabold text-slate-800 backdrop-blur transition hover:bg-white/85"
+                          >
+                            Contacto
+                          </Link>
                         </div>
-                      ) : null}
-
-                      <h2 className="mt-4 text-[34px] leading-[1.05] font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                        {s.title}
-                      </h2>
-
-                      <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-                        {s.subtitle}
-                      </p>
-
-                      {/* Botones: móvil columna / desktop fila */}
-                      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                        <Link
-                          href={s.ctaHref}
-                          className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-[0_18px_45px_-25px_rgba(2,132,199,.6)]"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, rgba(56,189,248,.95), rgba(37,99,235,.92))",
-                          }}
-                        >
-                          {s.ctaText} <span className="ml-2">→</span>
-                        </Link>
-
-                        <Link
-                          href="/contacto"
-                          className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl border border-white/60 bg-white/70 px-6 py-3 text-sm sm:text-base font-extrabold text-slate-800 backdrop-blur transition hover:bg-white/85"
-                        >
-                          Contacto
-                        </Link>
                       </div>
                     </div>
                   </div>
+
+                  {/* arrows (solo desktop) */}
+                  <button
+                    type="button"
+                    onClick={prev}
+                    aria-label="Anterior"
+                    className="hidden sm:block group absolute left-5 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/75 p-3 ring-1 ring-white/60 backdrop-blur shadow-sm transition hover:bg-white/90"
+                  >
+                    <span className="block text-xl font-extrabold text-slate-800 transition group-hover:scale-105">
+                      ‹
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={next}
+                    aria-label="Siguiente"
+                    className="hidden sm:block group absolute right-5 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/75 p-3 ring-1 ring-white/60 backdrop-blur shadow-sm transition hover:bg-white/90"
+                  >
+                    <span className="block text-xl font-extrabold text-slate-800 transition group-hover:scale-105">
+                      ›
+                    </span>
+                  </button>
                 </div>
-              </div>
-            ))}
-          </motion.div>
+              ))}
+            </motion.div>
 
-          {/* Arrows */}
-          <button
-            type="button"
-            onClick={prev}
-            aria-label="Anterior"
-            className="group absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/75 p-3 sm:p-3.5 ring-1 ring-white/60 backdrop-blur shadow-sm transition hover:bg-white/90"
-          >
-            <span className="block text-xl font-extrabold text-slate-800 transition group-hover:scale-105">
-              ‹
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={next}
-            aria-label="Siguiente"
-            className="group absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/75 p-3 sm:p-3.5 ring-1 ring-white/60 backdrop-blur shadow-sm transition hover:bg-white/90"
-          >
-            <span className="block text-xl font-extrabold text-slate-800 transition group-hover:scale-105">
-              ›
-            </span>
-          </button>
-
-          {/* Dots */}
-          <div className="absolute bottom-4 sm:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-2">
-            {slides.map((_, di) => {
-              const active = di === index
-              return (
-                <button
-                  key={di}
-                  type="button"
-                  onClick={() => setIndex(di)}
-                  aria-label={`Ir al slide ${di + 1}`}
-                  className="rounded-full p-1"
-                >
-                  <span
-                    className={[
-                      "block h-2.5 rounded-full transition-all",
-                      active ? "w-8 bg-sky-600" : "w-2.5 bg-slate-300 hover:bg-slate-400",
-                    ].join(" ")}
-                  />
-                </button>
-              )
-            })}
+            {/* dots */}
+            <div className="absolute bottom-4 sm:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-2">
+              {slides.map((_, di) => {
+                const active = di === index
+                return (
+                  <button
+                    key={di}
+                    type="button"
+                    onClick={() => setIndex(di)}
+                    aria-label={`Ir al slide ${di + 1}`}
+                    className="rounded-full p-1"
+                  >
+                    <span
+                      className={[
+                        "block h-2.5 rounded-full transition-all",
+                        active ? "w-8 bg-sky-600" : "w-2.5 bg-slate-300 hover:bg-slate-400",
+                      ].join(" ")}
+                    />
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -233,7 +237,8 @@ function PrimeHeroSlider({
 }
 
 /* =======================
-   Panel derecho ESTÁTICO + Fade SOLO en imagen superior
+   Panel: Desktop (tarjeta)
+   Mobile (carrusel horizontal)
 ======================= */
 function CatalogPanelCarousel({
   slides,
@@ -244,147 +249,196 @@ function CatalogPanelCarousel({
   autoPlay?: boolean
   intervalMs?: number
 }) {
-  const s = slides[0]
-
-  const images = useMemo(
-    () => [
-      "https://images.unsplash.com/photo-1585238342028-4bcb2f56b1f1?auto=format&fit=crop&w=1400&q=70",
-      "https://images.unsplash.com/photo-1604908177453-746d7d1b4f0b?auto=format&fit=crop&w=1400&q=70",
-      "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1400&q=70",
-    ],
-    []
-  )
-
-  const [imgIndex, setImgIndex] = useState(0)
+  const [slideIndex, setSlideIndex] = useState(0)
+  const count = slides.length
 
   useEffect(() => {
-    if (!autoPlay || images.length <= 1) return
-    const t = window.setInterval(() => setImgIndex((i) => (i + 1) % images.length), intervalMs)
+    if (!autoPlay || count <= 1) return
+    const t = window.setInterval(() => setSlideIndex((i) => (i + 1) % count), intervalMs)
     return () => window.clearInterval(t)
-  }, [autoPlay, intervalMs, images.length])
+  }, [autoPlay, count, intervalMs])
 
+  const s = slides[slideIndex]
   if (!s) return null
+
+  // flatten items para móvil
+  const items = slides.flatMap((x) => x.items)
 
   return (
     <div className="relative">
-      <div className="relative overflow-hidden rounded-[28px] bg-white/70 backdrop-blur shadow-[0_40px_120px_-70px_rgba(15,23,42,.5)] ring-1 ring-slate-200">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-50 via-white to-transparent" />
-
-        <div className="relative flex items-center justify-between px-6 pt-6">
-          <div className="text-sm font-extrabold text-slate-900">{s.titleLeft}</div>
-          <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-extrabold text-slate-600 ring-1 ring-slate-200">
-            {s.badgeRight}
-          </div>
+      {/* MOBILE: carrusel */}
+      <div className="sm:hidden">
+        <div className="flex items-center justify-between px-1">
+          <div className="text-sm font-extrabold text-slate-900">Recomendados</div>
+          <div className="text-xs font-extrabold text-slate-500">Desliza →</div>
         </div>
 
-        <div className="relative px-6 pb-5 pt-4">
-          <div className="grid gap-5">
-            {/* CARD 1: imagen cambia con fade */}
-            <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)]">
-              <div className="relative h-32 overflow-hidden rounded-t-2xl bg-slate-50">
-                <motion.img
-                  key={images[imgIndex]}
-                  src={images[imgIndex]}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.55, ease: "easeOut" }}
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/60 to-transparent" />
-              </div>
-
-              <div className="p-4">
-                <div className="text-sm font-extrabold text-slate-900">{s.items?.[0]?.name}</div>
-                <div className="text-[11px] font-semibold text-slate-400">{s.items?.[0]?.sub}</div>
-
-                <div className="mt-2 text-sm font-extrabold text-slate-900">
-                  ${money(s.items?.[0]?.price ?? 0)}
+        <div className="mt-3 overflow-x-auto pb-2">
+          <div className="flex gap-4 pr-3">
+            {items.map((it, i) => (
+              <div
+                key={it.name + i}
+                className="min-w-[240px] overflow-hidden rounded-3xl bg-white/90 ring-1 ring-slate-200 shadow-[0_26px_90px_-70px_rgba(15,23,42,.55)]"
+              >
+                <div className="relative h-32">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.image} alt="" className="h-full w-full object-cover" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/50 to-transparent" />
                 </div>
+                <div className="p-4">
+                  <div className="text-sm font-extrabold text-slate-900">{it.name}</div>
+                  <div className="text-[11px] font-semibold text-slate-400">{it.sub}</div>
+                  <div className="mt-2 text-sm font-extrabold text-slate-900">${money(it.price)}</div>
 
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
-                    aria-label="Agregar"
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
-                    aria-label="Ver"
-                  >
-                    →
-                  </button>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm"
+                      aria-label="Agregar"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm"
+                      aria-label="Ver"
+                    >
+                      →
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* CARD 2: estática */}
-            <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)]">
-              <div className="relative h-32 overflow-hidden rounded-t-2xl bg-slate-50">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.items?.[1]?.image} alt="" className="h-full w-full object-cover" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/60 to-transparent" />
-              </div>
-
-              <div className="p-4">
-                <div className="text-sm font-extrabold text-slate-900">{s.items?.[1]?.name}</div>
-                <div className="text-[11px] font-semibold text-slate-400">{s.items?.[1]?.sub}</div>
-
-                <div className="mt-2 text-sm font-extrabold text-slate-900">
-                  ${money(s.items?.[1]?.price ?? 0)}
-                </div>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
-                    aria-label="Agregar"
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
-                    aria-label="Ver"
-                  >
-                    →
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Dots (3 imágenes) */}
-        <div className="pb-6">
-          <div className="flex items-center justify-center gap-2">
-            {images.map((_, di) => {
-              const active = di === imgIndex
-              return (
-                <button
-                  key={di}
-                  type="button"
-                  onClick={() => setImgIndex(di)}
-                  aria-label={`Imagen ${di + 1}`}
-                  className="rounded-full p-1"
-                >
-                  <span
-                    className={[
-                      "block h-2.5 rounded-full transition-all",
-                      active ? "w-7 bg-sky-600" : "w-2.5 bg-slate-300 hover:bg-slate-400",
-                    ].join(" ")}
-                  />
-                </button>
-              )
-            })}
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-r from-sky-200/35 via-blue-200/20 to-cyan-200/30 blur-2xl" />
+      {/* DESKTOP: panel */}
+      <div className="hidden sm:block">
+        <div className="relative overflow-hidden rounded-[28px] bg-white/70 backdrop-blur shadow-[0_40px_120px_-70px_rgba(15,23,42,.5)] ring-1 ring-slate-200">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-50 via-white to-transparent" />
+
+          <div className="relative flex items-center justify-between px-6 pt-6">
+            <div className="text-sm font-extrabold text-slate-900">{s.titleLeft}</div>
+            <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-extrabold text-slate-600 ring-1 ring-slate-200">
+              {s.badgeRight}
+            </div>
+          </div>
+
+          <div className="relative px-6 pb-5 pt-4">
+            <div className="grid gap-5">
+              {/* Card 1 (fade) */}
+              <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)] overflow-hidden">
+                <div className="relative h-44 bg-slate-50">
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={s.items?.[0]?.image + slideIndex}
+                      src={s.items?.[0]?.image}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    />
+                  </AnimatePresence>
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/60 to-transparent" />
+                </div>
+
+                <div className="p-4">
+                  <div className="text-sm font-extrabold text-slate-900">{s.items?.[0]?.name}</div>
+                  <div className="text-[11px] font-semibold text-slate-400">{s.items?.[0]?.sub}</div>
+                  <div className="mt-2 text-sm font-extrabold text-slate-900">
+                    ${money(s.items?.[0]?.price ?? 0)}
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
+                      aria-label="Agregar"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
+                      aria-label="Ver"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 */}
+              <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)] overflow-hidden">
+                <div className="relative h-44 bg-slate-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.items?.[1]?.image}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/60 to-transparent" />
+                </div>
+
+                <div className="p-4">
+                  <div className="text-sm font-extrabold text-slate-900">{s.items?.[1]?.name}</div>
+                  <div className="text-[11px] font-semibold text-slate-400">{s.items?.[1]?.sub}</div>
+                  <div className="mt-2 text-sm font-extrabold text-slate-900">
+                    ${money(s.items?.[1]?.price ?? 0)}
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
+                      aria-label="Agregar"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
+                      aria-label="Ver"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* dots */}
+          <div className="pb-6">
+            <div className="flex items-center justify-center gap-2">
+              {slides.map((_, di) => {
+                const active = di === slideIndex
+                return (
+                  <button
+                    key={di}
+                    type="button"
+                    onClick={() => setSlideIndex(di)}
+                    aria-label={`Slide ${di + 1}`}
+                    className="rounded-full p-1"
+                  >
+                    <span
+                      className={[
+                        "block h-2.5 rounded-full transition-all",
+                        active ? "w-7 bg-sky-600" : "w-2.5 bg-slate-300 hover:bg-slate-400",
+                      ].join(" ")}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-r from-sky-200/35 via-blue-200/20 to-cyan-200/30 blur-2xl" />
+      </div>
     </div>
   )
 }
@@ -438,16 +492,6 @@ export default function HomePage() {
         ctaHref: "/productos",
         image:
           "https://images.unsplash.com/photo-1523966211575-eb4a01e7dd51?auto=format&fit=crop&w=2400&q=70",
-      },
-      {
-        id: "h4",
-        badge: "Operadora Balles",
-        title: "Diseño Versión 1.0",
-        subtitle: "Simple y fácil.",
-        ctaText: "Contacto",
-        ctaHref: "/contacto",
-        image:
-          "https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=2400&q=70",
       },
     ],
     []
@@ -523,13 +567,13 @@ export default function HomePage() {
 
   return (
     <div className="relative">
-      {/* ✅ HERO FULL WIDTH real (rompe max-w del layout) */}
+      {/* HERO (100vw) pero contenido centrado y sin recortes */}
       <FullBleed>
         <PrimeHeroSlider slides={heroSlides} autoPlay intervalMs={6500} />
       </FullBleed>
 
-      {/* Resto normal (se queda dentro del max-w del layout) */}
-      <section className="mx-auto max-w-7xl px-0 pt-10">
+      {/* Resto normal */}
+      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-10">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -545,7 +589,7 @@ export default function HomePage() {
               Catálogo Operadora Balles
             </div>
 
-            <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl">
+            <h1 className="text-4xl sm:text-5xl font-extrabold leading-[1.05] tracking-tight text-slate-900">
               El catálogo más <br />
               rápido en <span className="text-sky-600">tu ciudad</span>
             </h1>
@@ -567,10 +611,7 @@ export default function HomePage() {
                 Ver catálogo
               </Link>
 
-              <button
-                type="button"
-                className="group inline-flex items-center gap-3 text-sm font-extrabold text-slate-700"
-              >
+              <button type="button" className="group inline-flex items-center gap-3 text-sm font-extrabold text-slate-700">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-[0_12px_30px_-18px_rgba(15,23,42,.35)] ring-1 ring-slate-200 transition group-hover:scale-[1.02]">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-200">
                     ▶
@@ -590,6 +631,7 @@ export default function HomePage() {
           </motion.div>
         </div>
 
+        {/* Info bar */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -604,7 +646,8 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-0 pb-16 pt-16">
+      {/* Most Popular Items */}
+      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pb-16 pt-16">
         <div className="text-center">
           <div className="text-xs font-bold text-slate-400">Productos</div>
           <h2 className="mt-1 text-2xl font-extrabold text-slate-900">Productos más vendidos</h2>
