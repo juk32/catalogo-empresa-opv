@@ -38,22 +38,26 @@ type HeroSlide = {
 }
 
 /* =======================
-   FullBleed (sin recortes)
-   - evita el “left shift”
+   FullBleed (estable)
+   - rompe el max-w del <main>
+   - NO usa 100vw (evita recortes)
 ======================= */
 function FullBleed({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-full">
-      {/* 100vw centrado */}
-      <div className="relative left-1/2 w-[100vw] -translate-x-1/2">{children}</div>
+    <div
+      className="
+        relative
+        -mx-[calc((100vw-100%)/2)]
+        w-[calc(100%+((100vw-100%)))]
+      "
+    >
+      {children}
     </div>
   )
 }
 
 /* =======================
-   HERO SLIDER (centrado + grande)
-   - SIN recorte a la izquierda
-   - Responsive real (móvil / desktop)
+   HERO SLIDER (centrado dentro del full-bleed)
 ======================= */
 function PrimeHeroSlider({
   slides,
@@ -76,11 +80,9 @@ function PrimeHeroSlider({
     return () => window.clearInterval(t)
   }, [autoPlay, count, intervalMs])
 
-  // swipe mobile
+  // swipe
   const startX = useRef<number | null>(null)
-  const onTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0]?.clientX ?? null
-  }
+  const onTouchStart = (e: React.TouchEvent) => (startX.current = e.touches[0]?.clientX ?? null)
   const onTouchEnd = (e: React.TouchEvent) => {
     if (startX.current == null) return
     const endX = e.changedTouches[0]?.clientX ?? startX.current
@@ -92,21 +94,19 @@ function PrimeHeroSlider({
   }
 
   return (
-    // ✅ IMPORTANTÍSIMO: centrado con max-w y padding propio
-    <section className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5">
-      <div className="relative">
-        {/* glow */}
-        <div className="pointer-events-none absolute -inset-10 -z-10 rounded-[44px] bg-gradient-to-r from-sky-200/30 via-blue-200/18 to-cyan-200/25 blur-3xl" />
+    <section className="w-full pt-3 sm:pt-5">
+      {/* ✅ contenedor centrado (mismo max-w del sitio) */}
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="relative">
+          <div className="pointer-events-none absolute -inset-10 -z-10 rounded-[44px] bg-gradient-to-r from-sky-200/30 via-blue-200/18 to-cyan-200/25 blur-3xl" />
 
-        {/* ✅ SIN px internos (evita recortes raros) */}
-        <div
-          className="relative overflow-hidden rounded-[22px] sm:rounded-[34px]
-                     bg-white/55 backdrop-blur ring-1 ring-slate-200
-                     shadow-[0_60px_160px_-105px_rgba(15,23,42,.70)]"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
-          <div className="relative overflow-hidden rounded-[22px] sm:rounded-[34px]">
+          <div
+            className="relative overflow-hidden rounded-[22px] sm:rounded-[34px]
+                       bg-white/55 backdrop-blur ring-1 ring-slate-200
+                       shadow-[0_60px_160px_-105px_rgba(15,23,42,.70)]"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
             <motion.div
               className="flex"
               animate={{ x: `-${index * 100}%` }}
@@ -116,28 +116,19 @@ function PrimeHeroSlider({
               {slides.map((s) => (
                 <div
                   key={s.id}
-                  className="
-                    relative w-full shrink-0
-                    h-[320px]
-                    sm:h-[480px]
-                    lg:h-[620px]
-                    xl:h-[700px]
-                  "
+                  className="relative w-full shrink-0 h-[260px] sm:h-[380px] lg:h-[480px] xl:h-[540px]"
+
                 >
-                  {/* bg image */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
 
-                  {/* overlays */}
                   <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/72 to-white/25 sm:from-white/88 sm:via-white/60 sm:to-white/20" />
                   <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent sm:from-white/70" />
 
-                  {/* blobs */}
                   <div className="pointer-events-none absolute -left-24 -top-20 h-72 w-72 rounded-full bg-sky-300/22 blur-3xl" />
                   <div className="pointer-events-none absolute left-1/3 -top-24 h-72 w-72 rounded-full bg-indigo-300/16 blur-3xl" />
                   <div className="pointer-events-none absolute right-0 -top-20 h-72 w-72 rounded-full bg-cyan-300/16 blur-3xl" />
 
-                  {/* content */}
                   <div className="relative z-10 flex h-full items-center">
                     <div className="w-full px-4 sm:px-10 lg:px-14">
                       <div className="max-w-[42rem] text-center sm:text-left">
@@ -181,7 +172,6 @@ function PrimeHeroSlider({
                     </div>
                   </div>
 
-                  {/* arrows (solo desktop) */}
                   <button
                     type="button"
                     onClick={prev}
@@ -207,7 +197,6 @@ function PrimeHeroSlider({
               ))}
             </motion.div>
 
-            {/* dots */}
             <div className="absolute bottom-4 sm:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-2">
               {slides.map((_, di) => {
                 const active = di === index
@@ -237,8 +226,7 @@ function PrimeHeroSlider({
 }
 
 /* =======================
-   Panel: Desktop (tarjeta)
-   Mobile (carrusel horizontal)
+   Panel: Desktop + Mobile
 ======================= */
 function CatalogPanelCarousel({
   slides,
@@ -261,12 +249,11 @@ function CatalogPanelCarousel({
   const s = slides[slideIndex]
   if (!s) return null
 
-  // flatten items para móvil
   const items = slides.flatMap((x) => x.items)
 
   return (
     <div className="relative">
-      {/* MOBILE: carrusel */}
+      {/* MOBILE */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between px-1">
           <div className="text-sm font-extrabold text-slate-900">Recomendados</div>
@@ -313,7 +300,7 @@ function CatalogPanelCarousel({
         </div>
       </div>
 
-      {/* DESKTOP: panel */}
+      {/* DESKTOP */}
       <div className="hidden sm:block">
         <div className="relative overflow-hidden rounded-[28px] bg-white/70 backdrop-blur shadow-[0_40px_120px_-70px_rgba(15,23,42,.5)] ring-1 ring-slate-200">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-50 via-white to-transparent" />
@@ -327,7 +314,6 @@ function CatalogPanelCarousel({
 
           <div className="relative px-6 pb-5 pt-4">
             <div className="grid gap-5">
-              {/* Card 1 (fade) */}
               <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)] overflow-hidden">
                 <div className="relative h-44 bg-slate-50">
                   <AnimatePresence mode="wait">
@@ -351,35 +337,13 @@ function CatalogPanelCarousel({
                   <div className="mt-2 text-sm font-extrabold text-slate-900">
                     ${money(s.items?.[0]?.price ?? 0)}
                   </div>
-
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
-                      aria-label="Agregar"
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
-                      aria-label="Ver"
-                    >
-                      →
-                    </button>
-                  </div>
                 </div>
               </div>
 
-              {/* Card 2 */}
               <div className="rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-[0_16px_45px_-34px_rgba(15,23,42,.22)] overflow-hidden">
                 <div className="relative h-44 bg-slate-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={s.items?.[1]?.image}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
+                  <img src={s.items?.[1]?.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/60 to-transparent" />
                 </div>
 
@@ -389,29 +353,11 @@ function CatalogPanelCarousel({
                   <div className="mt-2 text-sm font-extrabold text-slate-900">
                     ${money(s.items?.[1]?.price ?? 0)}
                   </div>
-
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm transition hover:scale-[1.02]"
-                      aria-label="Agregar"
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-sky-600 text-white shadow-sm transition hover:brightness-95"
-                      aria-label="Ver"
-                    >
-                      →
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* dots */}
           <div className="pb-6">
             <div className="flex items-center justify-center gap-2">
               {slides.map((_, di) => {
@@ -436,8 +382,6 @@ function CatalogPanelCarousel({
             </div>
           </div>
         </div>
-
-        <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-r from-sky-200/35 via-blue-200/20 to-cyan-200/30 blur-2xl" />
       </div>
     </div>
   )
@@ -567,12 +511,11 @@ export default function HomePage() {
 
   return (
     <div className="relative">
-      {/* HERO (100vw) pero contenido centrado y sin recortes */}
+      {/* ✅ Hero full-bleed correcto */}
       <FullBleed>
         <PrimeHeroSlider slides={heroSlides} autoPlay intervalMs={6500} />
       </FullBleed>
 
-      {/* Resto normal */}
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-10">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div
@@ -595,8 +538,7 @@ export default function HomePage() {
             </h1>
 
             <p className="max-w-lg text-sm leading-relaxed text-slate-500">
-              Un catálogo elegante para consultar productos, precios y disponibilidad, y generar
-              pedidos de forma rápida.
+              Un catálogo elegante para consultar productos, precios y disponibilidad, y generar pedidos de forma rápida.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -610,28 +552,14 @@ export default function HomePage() {
               >
                 Ver catálogo
               </Link>
-
-              <button type="button" className="group inline-flex items-center gap-3 text-sm font-extrabold text-slate-700">
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-[0_12px_30px_-18px_rgba(15,23,42,.35)] ring-1 ring-slate-200 transition group-hover:scale-[1.02]">
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-200">
-                    ▶
-                  </span>
-                </span>
-                Order Process
-              </button>
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-          >
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
             <CatalogPanelCarousel slides={slides} autoPlay intervalMs={4200} />
           </motion.div>
         </div>
 
-        {/* Info bar */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -646,7 +574,6 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Most Popular Items */}
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pb-16 pt-16">
         <div className="text-center">
           <div className="text-xs font-bold text-slate-400">Productos</div>
@@ -667,7 +594,6 @@ export default function HomePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.image} alt="" className="h-full w-full object-cover" />
               </div>
-
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -676,7 +602,6 @@ export default function HomePage() {
                   </div>
                   <div className="text-sm font-extrabold text-slate-700">${money(p.price)}</div>
                 </div>
-
                 <div className="mt-4">
                   <button
                     type="button"
@@ -688,18 +613,6 @@ export default function HomePage() {
               </div>
             </motion.div>
           ))}
-        </div>
-
-        <div className="mt-10 flex justify-center">
-          <Link
-            href="/productos"
-            className="inline-flex items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-extrabold text-slate-800 shadow-[0_26px_90px_-60px_rgba(15,23,42,.55)] ring-1 ring-slate-200"
-          >
-            See More Product{" "}
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-200">
-              →
-            </span>
-          </Link>
         </div>
       </section>
     </div>
