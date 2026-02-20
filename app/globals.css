@@ -3,16 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
-}
 
-@theme inline {
+  /* ✅ Si quieres mapear “tokens” tipo theme, hazlo con variables normales */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* (Opcional) fuentes si las usas con next/font */
+  --font-sans: var(--font-geist-sans, ui-sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace);
 }
 
-/* ✅ Fondo global tipo “azulado pro” */
+/* ✅ Fondo global */
 html,
 body {
   background: var(--background);
@@ -22,7 +22,7 @@ body {
 body {
   font-family: Arial, Helvetica, sans-serif;
 
-  /* Fondo pro (el tono de tu captura) */
+  /* Fondo pro */
   background:
     radial-gradient(1200px 520px at 50% -10%, rgba(56, 189, 248, 0.20), transparent 60%),
     radial-gradient(900px 520px at 12% 20%, rgba(99, 102, 241, 0.12), transparent 60%),
@@ -56,12 +56,10 @@ body {
   }
 }
 
-
 /* =========================
    NEON RED PACK (Home + Cards + Animaciones)
 ========================= */
 
-/* base surface premium (no blanco plano) */
 .card-neon {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(226, 232, 240, 0.90);
@@ -71,7 +69,6 @@ body {
   backdrop-filter: blur(18px);
 }
 
-/* HERO: más depth + glow */
 .hero-neon {
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid rgba(226, 232, 240, 0.88);
@@ -81,7 +78,6 @@ body {
   backdrop-filter: blur(22px);
 }
 
-/* neon text (azul→rojo) */
 .neon-text {
   background: linear-gradient(90deg, rgba(56,189,248,1), rgba(99,102,241,1), rgba(244,63,94,0.98));
   -webkit-background-clip: text;
@@ -90,7 +86,6 @@ body {
   text-shadow: 0 10px 28px rgba(244,63,94,0.12);
 }
 
-/* chips */
 .chip-neon {
   display: inline-flex;
   align-items: center;
@@ -104,7 +99,6 @@ body {
   box-shadow: 0 10px 24px -20px rgba(244,63,94,0.25);
 }
 
-/* CTAs */
 .cta-neon {
   border-radius: 16px;
   padding: 12px 24px;
@@ -164,7 +158,6 @@ body {
 
 /* ========== ANIMACIONES NEON ========== */
 
-/* borde neon animado */
 .neon-border-anim {
   position: relative;
 }
@@ -182,9 +175,15 @@ body {
     rgba(244,63,94,0.45),
     rgba(56,189,248,0.55)
   );
+
+  /* ✅ WebKit + estándar (quita warning) */
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+
+  /* ✅ compositing (webkit + estándar) */
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+
   opacity: 0.55;
   filter: drop-shadow(0 16px 36px rgba(244,63,94,0.16));
   animation: neonSpin 7.5s linear infinite;
@@ -193,7 +192,6 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* orbs animados (se ven bien en móvil) */
 .neon-orbs {
   background:
     radial-gradient(520px 300px at 20% 10%, rgba(56,189,248,0.20), transparent 60%),
@@ -208,7 +206,6 @@ body {
   50% { transform: translate3d(0,-10px,0) scale(1.01); opacity: .98; }
 }
 
-/* sweep brillo suave */
 .neon-sweep {
   background:
     radial-gradient(680px 220px at 20% 15%, rgba(255,255,255,0.65), transparent 60%),
@@ -221,7 +218,6 @@ body {
   50% { transform: translateX(10px); }
 }
 
-/* scanline super sutil */
 .scanline {
   background: repeating-linear-gradient(
     180deg,
@@ -233,14 +229,12 @@ body {
   mix-blend-mode: soft-light;
 }
 
-/* float suave (ya lo tienes, lo mejoro un poco) */
 @keyframes softFloat {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
 }
 .soft-float { animation: softFloat 6.5s ease-in-out infinite; }
 
-/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   .neon-border-anim::after,
   .neon-orbs,
@@ -249,3 +243,4 @@ body {
     animation: none !important;
   }
 }
+

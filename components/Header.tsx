@@ -30,7 +30,7 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-600 to-rose-500 shadow-[0_14px_35px_-22px_rgba(244,63,94,0.55)]" />
             <div className="leading-tight">
-              <div className="text-xs text-slate-500">OPERADORA</div>
+              <div className="text-xs text-slate-500">OPER</div>
               <div className="font-bold tracking-wide">BALLES</div>
             </div>
           </Link>

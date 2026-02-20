@@ -14,10 +14,80 @@ export const viewport = {
   initialScale: 1,
 }
 
+function SiteFooter() {
+  return (
+    <footer className="text-white">
+      <div className="relative overflow-hidden">
+        {/* fondo gradiente */}
+        <div className="absolute inset-0 bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600" />
+        {/* glows */}
+        <div className="pointer-events-none absolute -top-24 left-10 h-80 w-80 rounded-full bg-white/15 blur-[90px]" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-80 w-80 rounded-full bg-white/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-12">
+          <div className="grid gap-10 md:grid-cols-3">
+            <div>
+              <div className="text-xl font-extrabold">Operado</div>
+              <p className="mt-3 text-sm text-white/85">
+                Catálogo interno para consultar productos, precios y generar pedidos de forma rápida.
+              </p>
+
+              <div className="mt-5 flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15">f</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15">in</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15">ig</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-extrabold">Quick Links</div>
+              <ul className="mt-4 space-y-2 text-sm text-white/85">
+                <li>
+                  <a className="hover:text-white" href="/productos">
+                    Productos
+                  </a>
+                </li>
+                <li>
+                  <a className="hover:text-white" href="/pedido">
+                    Generar pedido
+                  </a>
+                </li>
+                <li>
+                  <a className="hover:text-white" href="/pedidos">
+                    Pedidos
+                  </a>
+                </li>
+                <li>
+                  <a className="hover:text-white" href="/contacto">
+                    Contacto
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <div className="text-sm font-extrabold">Address</div>
+              <p className="mt-4 text-sm text-white/85">
+                Hidalgo, México <br />
+                Operadora Balles
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-white/20 pt-6 text-xs text-white/85">
+            © {new Date().getFullYear()} Operadora Balles. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className="overflow-x-hidden">
-      <body className="min-h-screen text-slate-900 overflow-x-hidden antialiased">
+      {/* ✅ CLAVE: flex flex-col + main flex-1 para que el footer SIEMPRE se vea */}
+      <body className="min-h-screen overflow-x-hidden antialiased text-slate-900 flex flex-col">
         <Providers>
           {/* Fondo global */}
           <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -25,12 +95,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="absolute -top-40 left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-sky-300/25 blur-[120px]" />
             <div className="absolute top-16 left-10 h-[420px] w-[420px] rounded-full bg-indigo-300/14 blur-[130px]" />
             <div className="absolute top-24 right-10 h-[420px] w-[420px] rounded-full bg-sky-200/18 blur-[140px]" />
+            <div className="absolute -bottom-56 left-8 h-[520px] w-[520px] rounded-full bg-rose-300/16 blur-[150px]" />
           </div>
 
           <SiteHeader />
 
-          {/* ✅ CLAVE: overflow-x-clip evita “azul a la derecha” por sliders */}
-          <main className="mx-auto w-full max-w-7xl px-4 py-8 overflow-x-clip">
+          {/* ✅ main crece y empuja el footer abajo */}
+          <main className="mx-auto w-full max-w-7xl px-4 py-8 overflow-x-clip flex-1">
             {children}
           </main>
 
@@ -47,11 +118,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </a>
 
-          <footer className="mt-16 border-t border-slate-200/60 bg-white/60 backdrop-blur">
-            <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-slate-700">
-              Operadora Balles • Tlapacoya, Hidalgo
-            </div>
-          </footer>
+          <SiteFooter />
         </Providers>
       </body>
     </html>
