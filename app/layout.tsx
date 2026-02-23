@@ -85,9 +85,8 @@ function SiteFooter() {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className="overflow-x-hidden">
-      {/* ✅ CLAVE: flex flex-col + main flex-1 para que el footer SIEMPRE se vea */}
-      <body className="min-h-screen overflow-x-hidden antialiased text-slate-900 flex flex-col">
+    <html lang="es" className="w-full max-w-[100vw] overflow-x-hidden overscroll-x-none">
+      <body className="min-h-screen w-full max-w-[100vw] overflow-x-hidden overscroll-x-none antialiased text-slate-900 flex flex-col">
         <Providers>
           {/* Fondo global */}
           <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -100,8 +99,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <SiteHeader />
 
-          {/* ✅ main crece y empuja el footer abajo */}
-          <main className="mx-auto w-full max-w-7xl px-4 py-8 overflow-x-clip flex-1">
+          {/* ✅ main seguro contra overflow */}
+          <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-8 overflow-x-clip">
             {children}
           </main>
 

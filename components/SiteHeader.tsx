@@ -87,7 +87,8 @@ export default function SiteHeader() {
     "hover:shadow-[0_0_34px_rgba(56,189,248,.55),0_0_18px_rgba(244,63,94,.22)]"
 
   return (
-    <header className={cx(isHome && "sticky top-0", "z-50")}>
+    // ✅ CLAVE: relative + overflow-x-clip para que glows/blur no creen “ancho extra”
+    <header className={cx("relative w-full overflow-x-clip", isHome && "sticky top-0", "z-50")}>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24">
         <div
           className={cx(
@@ -118,7 +119,7 @@ export default function SiteHeader() {
           <div className={cx("h-[2px] w-full", compact ? "neon-blue-active rounded-t-[22px]" : "neon-topline")} />
           <div className={cx("pointer-events-none absolute inset-0 neon-frame", compact ? "opacity-80" : "opacity-55")} />
 
-          <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-6xl min-w-0 px-4">
             <div className="flex items-center justify-between gap-3 py-3">
               <Link href="/" className="group flex items-center gap-2">
                 <div
@@ -218,6 +219,7 @@ export default function SiteHeader() {
               </div>
             </div>
 
+            {/* Mobile nav */}
             <div className="md:hidden pb-3 flex gap-2 overflow-x-auto whitespace-nowrap pr-1">
               {nav.map((x) => {
                 const active = isActive(x.href)
@@ -231,7 +233,12 @@ export default function SiteHeader() {
                       active && "ring-1 ring-sky-300/70 bg-white/80 text-sky-950"
                     )}
                   >
-                    <span className={cx(active && "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-500 bg-clip-text text-transparent")}>
+                    <span
+                      className={cx(
+                        active &&
+                          "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-500 bg-clip-text text-transparent"
+                      )}
+                    >
                       {x.label}
                     </span>
                   </Link>
@@ -241,8 +248,6 @@ export default function SiteHeader() {
           </div>
 
           <div className={cx("h-[2px] w-full opacity-90", compact ? "neon-blue-active rounded-b-[22px]" : "neon-botline")} />
-
-          {/* tu <style> igual que antes (no lo toqué) */}
         </div>
       </div>
     </header>

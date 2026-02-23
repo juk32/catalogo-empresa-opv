@@ -4,10 +4,8 @@
   --background: #ffffff;
   --foreground: #0f172a;
 
-  /* ✅ Si quieres mapear “tokens” tipo theme, hazlo con variables normales */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* (Opcional) fuentes si las usas con next/font */
   --font-sans: var(--font-geist-sans, ui-sans-serif);
   --font-mono: var(--font-geist-mono, ui-monospace);
 }
@@ -176,11 +174,9 @@ body {
     rgba(56,189,248,0.55)
   );
 
-  /* ✅ WebKit + estándar (quita warning) */
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
 
-  /* ✅ compositing (webkit + estándar) */
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 
@@ -244,3 +240,31 @@ body {
   }
 }
 
+/* =========================================
+   ✅ FIX GLOBAL: evita “blanco” lateral móvil/tablet
+   (NO toca funcionalidad, solo layout safety)
+========================================= */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+/* En browsers que soportan clip, es mejor que hidden */
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+/* Evita que medios/iframes empujen el ancho */
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
