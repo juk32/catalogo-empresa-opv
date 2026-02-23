@@ -114,7 +114,7 @@ function HeroAgencyLike() {
 
             <div className="relative h-[320px] sm:h-[420px] lg:h-[520px]">
               <img
-                src="/hero.png"
+                src="/hero.png" 
                 alt="Hero"
                 className="absolute inset-0 h-full w-full object-contain object-bottom drop-shadow-[0_50px_80px_rgba(15,23,42,.18)]"
               />
@@ -594,7 +594,7 @@ export default function HomePage() {
                         "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
                     }}
                   >
-                    Add to cart
+                    Añadir al Carrito
                   </button>
                 </div>
               </div>
@@ -607,10 +607,10 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-16">
         <div className="text-left">
           <div className="text-[11px] font-extrabold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 bg-clip-text text-transparent">
-            WHAT WE DO
+            Que Hacemos
           </div>
           <h3 className="mt-2 text-3xl sm:text-4xl font-extrabold text-slate-900 max-w-2xl">
-            We provide the Perfect Solution <br className="hidden sm:block" />
+            S <br className="hidden sm:block" />
             to your business growth
           </h3>
         </div>

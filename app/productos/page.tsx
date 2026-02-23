@@ -104,9 +104,7 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
       <div className="p-4">
         {/* Categoría */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold text-sky-700">
-            {p.category || "Sin categoría"}
-          </span>
+          <span className="text-[11px] font-semibold text-sky-700">{p.category || "Sin categoría"}</span>
           <span className="text-[11px] text-slate-500 font-mono">{p.id}</span>
         </div>
 
@@ -126,16 +124,12 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
           <div className="min-w-0">
             <p className="text-[11px] text-slate-500">Precio</p>
             <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-extrabold tracking-tight text-slate-900">
-                ${money(p.price)}
-              </div>
+              <div className="text-2xl font-extrabold tracking-tight text-slate-900">${money(p.price)}</div>
               <div className="text-xs text-slate-400 line-through">${money(oldPrice)}</div>
             </div>
 
             {/* Texto tipo Amazon */}
-            <p className="mt-1 text-xs text-slate-600">
-              {inStock ? "Entrega rápida disponible" : "Sin disponibilidad"}
-            </p>
+            <p className="mt-1 text-xs text-slate-600">{inStock ? "Entrega rápida disponible" : "Sin disponibilidad"}</p>
           </div>
 
           {/* CTA */}
@@ -147,9 +141,7 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
         </div>
 
         {/* Descripción */}
-        <p className="mt-3 line-clamp-2 text-sm text-slate-600">
-          {p.description || "Sin descripción."}
-        </p>
+        <p className="mt-3 line-clamp-2 text-sm text-slate-600">{p.description || "Sin descripción."}</p>
       </div>
     </Link>
   )
@@ -254,9 +246,9 @@ export default function ProductosPage() {
   }, [products, category, qDebounced, sort])
 
   return (
-    <section className="relative space-y-5">
+    <section className="relative w-full min-w-0 space-y-5 overflow-x-clip">
       {/* Fondo blanco (Amazon store feel) */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-white" />
         <div className="absolute -top-40 left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-sky-200/35 blur-[140px]" />
       </div>
@@ -314,9 +306,7 @@ export default function ProductosPage() {
             ))}
           </select>
 
-          <div className="hidden md:block text-sm text-slate-500 text-right">
-            Tip: usa el buscador para ID exacto o nombre.
-          </div>
+          <div className="hidden md:block text-sm text-slate-500 text-right">Tip: usa el buscador para ID exacto o nombre.</div>
         </div>
 
         {categories.length > 2 ? (
