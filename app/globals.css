@@ -268,3 +268,36 @@ svg,
 iframe {
   max-width: 100%;
 }
+
+
+
+/* =========================
+   Header entrance animation
+========================= */
+@keyframes headerEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.995);
+    filter: blur(3px);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.002);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.header-enter {
+  animation: headerEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+}
+
+/* micro lift + shadow when scrolled */
+.header-scrolled {
+  box-shadow: 0 14px 30px -24px rgba(2, 6, 23, 0.35);
+}

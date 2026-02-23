@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { motion } from "framer-motion"
 
 type Product = {
   id: string
@@ -13,6 +14,10 @@ type Product = {
   details: any
   rating: number
   stock: number
+}
+
+function cn(...s: Array<string | false | null | undefined>) {
+  return s.filter(Boolean).join(" ")
 }
 
 function money(n: number) {
@@ -45,29 +50,23 @@ function Stars({ value }: { value: number }) {
 
 /* =========================
    Card estilo "Amazon Pro"
-   - No cambia funcionalidad
-   - Solo UI
 ========================= */
 function ProductCard({ p, i }: { p: Product; i: number }) {
   const stock = Number(p.stock ?? 0)
   const inStock = stock > 0
 
-  // UI-only: descuento / precio antes (igual que tú)
   const rating = Number(p.rating ?? 0)
   const discountPct = Math.max(10, Math.min(35, Math.round(18 + (5 - Math.min(5, Math.max(0, rating))) * 4)))
   const oldPrice = Math.round((p.price / (1 - discountPct / 100)) * 100) / 100
-
-  // UI-only: conteo de reseñas (se ve Amazon)
   const reviews = Math.max(8, Math.min(1400, Math.round(60 + rating * 220 + (i % 9) * 37)))
 
   return (
     <Link
       href={`/producto/${encodeURIComponent(p.id)}`}
-      className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white
-                 shadow-sm transition hover:-translate-y-[2px] hover:shadow-md"
+      className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition
+                 hover:-translate-y-[2px] hover:shadow-md"
       style={{ animationDelay: `${Math.min(i * 25, 220)}ms` }}
     >
-      {/* Top: imagen */}
       <div className="relative">
         <div className="aspect-[4/3] w-full bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -79,47 +78,41 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
           />
         </div>
 
-        {/* Descuento */}
         <div className="absolute left-3 top-3">
           <span className="rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
             -{discountPct}%
           </span>
         </div>
 
-        {/* Stock */}
         <div className="absolute right-3 top-3">
           <span
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm border ${
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm border",
               inStock
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : "bg-slate-100 text-slate-700 border-slate-200"
-            }`}
+            )}
           >
             {inStock ? `En stock (${stock})` : "Agotado"}
           </span>
         </div>
       </div>
 
-      {/* Body */}
       <div className="p-4">
-        {/* Categoría */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-semibold text-sky-700">{p.category || "Sin categoría"}</span>
           <span className="text-[11px] text-slate-500 font-mono">{p.id}</span>
         </div>
 
-        {/* Título */}
         <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold text-slate-900 group-hover:text-sky-700">
           {p.name}
         </h3>
 
-        {/* Rating + reseñas */}
         <div className="mt-2 flex items-center gap-2">
           <Stars value={p.rating} />
           <span className="text-xs text-slate-500">({reviews.toLocaleString("es-MX")})</span>
         </div>
 
-        {/* Precio */}
         <div className="mt-3 flex items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] text-slate-500">Precio</p>
@@ -127,12 +120,9 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
               <div className="text-2xl font-extrabold tracking-tight text-slate-900">${money(p.price)}</div>
               <div className="text-xs text-slate-400 line-through">${money(oldPrice)}</div>
             </div>
-
-            {/* Texto tipo Amazon */}
             <p className="mt-1 text-xs text-slate-600">{inStock ? "Entrega rápida disponible" : "Sin disponibilidad"}</p>
           </div>
 
-          {/* CTA */}
           <div className="shrink-0">
             <div className="rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition group-hover:bg-sky-700">
               Ver →
@@ -140,7 +130,6 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
           </div>
         </div>
 
-        {/* Descripción */}
         <p className="mt-3 line-clamp-2 text-sm text-slate-600">{p.description || "Sin descripción."}</p>
       </div>
     </Link>
@@ -162,6 +151,181 @@ function SkeletonCard() {
   )
 }
 
+/* =========================
+   Carrusel por familia
+   - Animaciones (sin afectar layout)
+   - Fade Neon Clear + flechas
+========================= */
+function CategoryCarouselSection({
+  title,
+  items,
+  startIndex = 0,
+}: {
+  title: string
+  items: Product[]
+  startIndex?: number
+}) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const [canLeft, setCanLeft] = useState(false)
+  const [canRight, setCanRight] = useState(true)
+
+  const updateEdges = () => {
+    const el = scrollerRef.current
+    if (!el) return
+    const tol = 2
+    setCanLeft(el.scrollLeft > tol)
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - tol)
+  }
+
+  const scrollByAmount = (dir: "left" | "right") => {
+    const el = scrollerRef.current
+    if (!el) return
+    const amount = Math.round(el.clientWidth * 0.92)
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    updateEdges()
+    const el = scrollerRef.current
+    if (!el) return
+    const onScroll = () => updateEdges()
+    el.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", updateEdges)
+    return () => {
+      el.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", updateEdges)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items?.length])
+
+  if (!items?.length) return null
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="relative"
+    >
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-extrabold text-slate-500">Familia</div>
+          <h2 className="truncate text-xl font-extrabold text-slate-900">{title}</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {items.length} producto{items.length === 1 ? "" : "s"}
+          </p>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => scrollByAmount("left")}
+            disabled={!canLeft}
+            className={cn(
+              "grid h-10 w-10 place-items-center rounded-full backdrop-blur ring-1 shadow-sm transition",
+              canLeft
+                ? "bg-white/80 ring-slate-200 hover:bg-white"
+                : "bg-white/50 ring-slate-100 text-slate-300 cursor-not-allowed"
+            )}
+            aria-label="Anterior"
+          >
+            ←
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollByAmount("right")}
+            disabled={!canRight}
+            className={cn(
+              "grid h-10 w-10 place-items-center rounded-full text-white transition hover:brightness-95",
+              !canRight ? "opacity-40 cursor-not-allowed" : "opacity-100"
+            )}
+            aria-label="Siguiente"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
+            }}
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/75 backdrop-blur shadow-[0_30px_110px_-80px_rgba(15,23,42,.55)]">
+        {/* glows */}
+        <div className="pointer-events-none absolute -top-20 left-10 h-72 w-72 rounded-full bg-sky-200/35 blur-[90px]" />
+        <div className="pointer-events-none absolute -bottom-20 right-10 h-72 w-72 rounded-full bg-rose-200/35 blur-[100px]" />
+
+        {/* ✅ Fade edges Neon Clear (bonito) */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-20 transition-opacity",
+            canLeft ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background:
+              "linear-gradient(to right, rgba(255,255,255,.96), rgba(255,255,255,0))",
+          }}
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-24 transition-opacity",
+            canRight ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background:
+              "linear-gradient(to left, rgba(255,255,255,.96), rgba(255,255,255,0))",
+          }}
+        />
+        {/* tint suave encima del fade (azul/rojo) */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-28 transition-opacity",
+            canRight ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background:
+              "linear-gradient(to left, rgba(56,189,248,.18), rgba(244,63,94,.12), rgba(255,255,255,0))",
+          }}
+        />
+
+        <div
+          ref={scrollerRef}
+          className={cn(
+            "relative overflow-x-auto px-4 py-4",
+            "scroll-smooth",
+            "[scrollbar-width:none] [-ms-overflow-style:none]",
+            "[&::-webkit-scrollbar]:hidden"
+          )}
+        >
+          <div className="flex gap-4 snap-x snap-mandatory pr-12">
+            {items.map((p, idx) => (
+              <motion.div
+                key={p.id}
+                className="snap-start min-w-[260px] sm:min-w-[320px] lg:min-w-[340px]"
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.25, delay: Math.min(idx * 0.03, 0.18) }}
+              >
+                <ProductCard p={p} i={startIndex + idx} />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        <div className="md:hidden px-5 pb-4 flex items-center justify-between">
+          <div className="text-xs font-bold text-slate-400">Desliza →</div>
+          <div className="text-xs font-extrabold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 bg-clip-text text-transparent">
+            Ver más
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  )
+}
+
 export default function ProductosPage() {
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
@@ -170,7 +334,6 @@ export default function ProductosPage() {
   const [qDebounced, setQDebounced] = useState("")
   const [category, setCategory] = useState("Todas")
 
-  // ✅ Amazon pro: ordenamiento
   const [sort, setSort] = useState<"relevance" | "price_asc" | "price_desc" | "rating_desc" | "stock_desc">(
     "relevance"
   )
@@ -224,7 +387,6 @@ export default function ProductosPage() {
       )
     }
 
-    // ✅ Ordenamiento Amazon pro
     switch (sort) {
       case "price_asc":
         list = [...list].sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
@@ -245,16 +407,34 @@ export default function ProductosPage() {
     return list
   }, [products, category, qDebounced, sort])
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, Product[]>()
+    for (const p of filtered) {
+      const key = (p.category || "Sin categoría").trim() || "Sin categoría"
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(p)
+    }
+    const keys = Array.from(map.keys()).sort((a, b) => a.localeCompare(b, "es"))
+    return keys.map((k) => ({ category: k, items: map.get(k)! }))
+  }, [filtered])
+
   return (
     <section className="relative w-full min-w-0 space-y-5 overflow-x-clip">
-      {/* Fondo blanco (Amazon store feel) */}
+      {/* Fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-white" />
         <div className="absolute -top-40 left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-sky-200/35 blur-[140px]" />
+        <div className="absolute top-24 right-[-220px] h-[520px] w-[520px] rounded-full bg-rose-200/25 blur-[150px]" />
+        <div className="absolute bottom-[-260px] left-[-220px] h-[640px] w-[640px] rounded-full bg-indigo-200/20 blur-[170px]" />
       </div>
 
-      {/* Header Amazon Pro */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
+      >
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Catálogo</h1>
           <p className="mt-1 text-slate-600">Busca por nombre, categoría o ID.</p>
@@ -289,10 +469,15 @@ export default function ProductosPage() {
             Recargar
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Filtros (compacto tipo Amazon) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      {/* Filtros */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
+        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      >
         <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
           <select
             value={category}
@@ -306,7 +491,9 @@ export default function ProductosPage() {
             ))}
           </select>
 
-          <div className="hidden md:block text-sm text-slate-500 text-right">Tip: usa el buscador para ID exacto o nombre.</div>
+          <div className="hidden md:block text-sm text-slate-500 text-right">
+            Tip: usa el buscador para ID exacto o nombre.
+          </div>
         </div>
 
         {categories.length > 2 ? (
@@ -317,11 +504,12 @@ export default function ProductosPage() {
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  className={cn(
+                    "whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition",
                     active
                       ? "bg-slate-900 text-white border-slate-900"
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
+                  )}
                 >
                   {c}
                 </button>
@@ -329,32 +517,40 @@ export default function ProductosPage() {
             })}
           </div>
         ) : null}
-      </div>
+      </motion.div>
 
-      {/* Search sticky (Amazon-style: siempre a mano) */}
+      {/* ✅ Buscador sticky: NO BAJA / NO HAY LAYOUT SHIFT */}
       <div className="sticky top-[72px] z-30">
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <span className="text-slate-400">🔎</span>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por nombre, categoría o ID…"
-              className="w-full bg-transparent outline-none text-sm text-slate-900 placeholder:text-slate-400"
-            />
-            {q ? (
-              <button
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                onClick={() => setQ("")}
-              >
-                Limpiar
-              </button>
-            ) : null}
-          </div>
+        {/* min-h para estabilidad visual */}
+        <div className="min-h-[64px]">
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+          >
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <span className="text-slate-400">🔎</span>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar por nombre, categoría o ID…"
+                className="w-full bg-transparent outline-none text-sm text-slate-900 placeholder:text-slate-400"
+              />
+              {q ? (
+                <button
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  onClick={() => setQ("")}
+                >
+                  Limpiar
+                </button>
+              ) : null}
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* List */}
+      {/* Listado */}
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
@@ -366,14 +562,18 @@ export default function ProductosPage() {
           No hay productos con esos filtros.
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((p, i) => (
-            <ProductCard key={p.id} p={p} i={i} />
+        <div className="space-y-10">
+          {grouped.map((g, sectionIdx) => (
+            <CategoryCarouselSection
+              key={g.category}
+              title={g.category}
+              items={g.items}
+              startIndex={sectionIdx * 1000}
+            />
           ))}
         </div>
       )}
 
-      {/* CSS local */}
       <style>{`
         @keyframes spinAnim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spin { animation: spinAnim 650ms linear; }

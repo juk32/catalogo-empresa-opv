@@ -23,10 +23,10 @@ export default function LoginClient() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/productos")
-      router.refresh()
+      // si ya hay sesión, fuera de /login
+      window.location.assign("/productos")
     }
-  }, [status, router])
+  }, [status])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,14 +47,14 @@ export default function LoginClient() {
       return
     }
 
-    router.replace(res.url || callbackUrl)
-    router.refresh()
+    // ✅ Redirect fuerte: evita “doble click” y estados raros
+    window.location.assign(res.url || callbackUrl)
   }
 
   return (
     <div className="relative w-full min-h-[calc(100vh-180px)] flex items-center justify-center">
-      {/* ✅ Fondo azul por encima del fondo global */}
-      <div className="fixed inset-0 z-0">
+      {/* Fondo azul por encima del fondo global */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-[#1f4bd6]" />
         <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-white/10 blur-[70px]" />
         <div className="absolute -bottom-48 -right-48 h-[560px] w-[560px] rounded-full bg-black/10 blur-[80px]" />
@@ -66,7 +66,6 @@ export default function LoginClient() {
         </svg>
       </div>
 
-      {/* ✅ Contenido arriba del fondo */}
       <div className="relative z-10 w-full max-w-[420px] px-4">
         <div className="rounded-[26px] border border-white/25 bg-white/10 backdrop-blur-xl shadow-[0_40px_120px_-70px_rgba(0,0,0,.85)] overflow-hidden">
           <div className="h-[2px] w-full bg-gradient-to-r from-white/40 via-white/10 to-white/40 opacity-80" />

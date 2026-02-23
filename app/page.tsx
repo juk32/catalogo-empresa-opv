@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 /* =======================
@@ -31,6 +31,10 @@ type Testimonial = {
   name: string
   role: string
   text: string
+}
+
+function cn(...s: Array<string | false | null | undefined>) {
+  return s.filter(Boolean).join(" ")
 }
 
 /* =======================
@@ -114,7 +118,7 @@ function HeroAgencyLike() {
 
             <div className="relative h-[320px] sm:h-[420px] lg:h-[520px]">
               <img
-                src="/hero.png" 
+                src="/hero.png"
                 alt="Hero"
                 className="absolute inset-0 h-full w-full object-contain object-bottom drop-shadow-[0_50px_80px_rgba(15,23,42,.18)]"
               />
@@ -128,10 +132,10 @@ function HeroAgencyLike() {
             ].map((x) => (
               <div
                 key={x.pos}
-                className={[
+                className={cn(
                   "absolute grid h-12 w-12 place-items-center rounded-2xl bg-white/65 backdrop-blur ring-1 ring-slate-200 shadow-sm",
-                  x.pos,
-                ].join(" ")}
+                  x.pos
+                )}
               >
                 <span className="text-lg font-extrabold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 bg-clip-text text-transparent">
                   {x.label}
@@ -264,17 +268,146 @@ function CatalogPanelCarousel({
               return (
                 <button key={i} onClick={() => setIndex(i)} className="rounded-full p-1" aria-label={`Slide ${i + 1}`}>
                   <span
-                    className={[
+                    className={cn(
                       "block h-2.5 rounded-full transition-all",
                       active
                         ? "w-8 bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600"
-                        : "w-2.5 bg-slate-300 hover:bg-slate-400",
-                    ].join(" ")}
+                        : "w-2.5 bg-slate-300 hover:bg-slate-400"
+                    )}
                   />
                 </button>
               )
             })}
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* =======================
+   NUEVO: Carrusel "Más vendidos"
+   - Mobile: swipe horizontal
+   - Desktop: flechas + scroll snap
+======================= */
+function BestSellersCarousel({
+  items,
+}: {
+  items: Item[]
+}) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollByCards = (dir: "left" | "right") => {
+    const el = scrollerRef.current
+    if (!el) return
+    const amount = Math.round(el.clientWidth * 0.9) // un “pantallazo” casi completo
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" })
+  }
+
+  return (
+    <div className="relative">
+      {/* glows para combinar con header/footer */}
+      <div className="pointer-events-none absolute -top-10 left-10 h-56 w-56 rounded-full bg-sky-200/35 blur-[80px]" />
+      <div className="pointer-events-none absolute -bottom-10 right-10 h-56 w-56 rounded-full bg-rose-200/35 blur-[90px]" />
+
+      {/* flechas desktop */}
+      <div className="hidden md:flex items-center justify-end gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => scrollByCards("left")}
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/75 backdrop-blur ring-1 ring-slate-200 shadow-sm hover:bg-white"
+          aria-label="Anterior"
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollByCards("right")}
+          className="grid h-10 w-10 place-items-center rounded-full text-white shadow-[0_18px_45px_-25px_rgba(244,63,94,.45)] hover:brightness-95"
+          aria-label="Siguiente"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
+          }}
+        >
+          →
+        </button>
+      </div>
+
+      {/* carrusel */}
+      <div
+        ref={scrollerRef}
+        className={cn(
+          "relative overflow-x-auto pb-3",
+          "scroll-smooth",
+          "[scrollbar-width:none] [-ms-overflow-style:none]",
+          "[&::-webkit-scrollbar]:hidden"
+        )}
+      >
+        <div className="flex gap-5 pr-3 snap-x snap-mandatory">
+          {items.map((p, idx) => (
+            <motion.article
+              key={p.name + idx}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.35, delay: idx * 0.02 }}
+              className={cn(
+                "snap-start",
+                "min-w-[260px] sm:min-w-[300px] lg:min-w-[320px]",
+                "overflow-hidden rounded-3xl",
+                "bg-white/70 backdrop-blur",
+                "ring-1 ring-slate-200",
+                "shadow-[0_30px_110px_-75px_rgba(15,23,42,.65)]"
+              )}
+            >
+              <div className="relative h-44">
+                <img src={p.image} alt="" className="h-full w-full object-cover" />
+                {/* overlay rojizo/azul, sutil */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/85 via-white/35 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,.35),transparent_55%),radial-gradient(circle_at_80%_30%,rgba(244,63,94,.28),transparent_55%)]" />
+              </div>
+
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-base font-extrabold text-slate-900">{p.name}</div>
+                    <div className="text-[11px] font-semibold text-slate-500">{p.sub}</div>
+                    <div className="mt-1 text-xs font-bold text-slate-400">★ 4.8</div>
+                  </div>
+
+                  <div className="shrink-0 text-sm font-extrabold text-slate-900">
+                    ${money(p.price)}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl px-4 py-2 text-xs font-extrabold text-white transition hover:brightness-95"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
+                    }}
+                  >
+                    Añadir al Carrito
+                  </button>
+
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    Disponible
+                  </div>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </div>
+
+      {/* hint mobile */}
+      <div className="mt-2 flex items-center justify-between md:hidden">
+        <div className="text-xs font-bold text-slate-400">Desliza para ver más</div>
+        <div className="text-xs font-extrabold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 bg-clip-text text-transparent">
+          Más vendidos →
         </div>
       </div>
     </div>
@@ -557,49 +690,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* POPULARES */}
+      {/* POPULARES (AHORA CARRUSEL) */}
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pb-16 pt-16">
-        <div className="text-center">
-          <div className="text-xs font-bold text-slate-400">Productos</div>
-          <h2 className="mt-1 text-2xl font-extrabold text-slate-900">Productos más vendidos</h2>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <div className="text-xs font-bold text-slate-400">Productos</div>
+            <h2 className="mt-1 text-2xl font-extrabold text-slate-900">Productos más vendidos</h2>
+            <p className="mt-2 max-w-xl text-sm text-slate-500">
+              Lo más consultado del catálogo. Carrusel estilo “cards” con estética rojo/azul (Neon Clear).
+            </p>
+          </div>
+
+          <Link
+            href="/productos"
+            className="hidden sm:inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-xs font-extrabold text-slate-800 backdrop-blur hover:bg-white"
+          >
+            Ver todos →
+          </Link>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {popular.map((p, idx) => (
-            <motion.div
-              key={p.name + idx}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.35, delay: idx * 0.03 }}
-              className="overflow-hidden rounded-3xl bg-white shadow-[0_26px_90px_-60px_rgba(15,23,42,.55)] ring-1 ring-slate-200"
-            >
-              <div className="relative h-44">
-                <img src={p.image} alt="" className="h-full w-full object-cover" />
-              </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-extrabold text-slate-900">{p.name}</div>
-                    <div className="text-xs font-semibold text-slate-400">★ 4.8</div>
-                  </div>
-                  <div className="text-sm font-extrabold text-slate-700">${money(p.price)}</div>
-                </div>
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    className="rounded-xl px-4 py-2 text-xs font-extrabold text-white transition hover:brightness-95"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
-                    }}
-                  >
-                    Añadir al Carrito
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+        <div className="mt-8">
+          <BestSellersCarousel items={popular} />
+        </div>
+
+        <div className="mt-6 sm:hidden">
+          <Link
+            href="/productos"
+            className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-extrabold text-white hover:brightness-95"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
+            }}
+          >
+            Ver todo el catálogo
+          </Link>
         </div>
       </section>
 
