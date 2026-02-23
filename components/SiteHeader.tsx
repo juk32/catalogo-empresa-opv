@@ -17,6 +17,13 @@ type NavItem = { label: string; href: string }
 
 export default function SiteHeader() {
   const pathname = usePathname()
+
+  
+// ✅ Ocultar header solo en /login
+if (pathname === "/login") return null  
+
+ 
+
   const isHome = pathname === "/"
 
   const [compact, setCompact] = useState(false)

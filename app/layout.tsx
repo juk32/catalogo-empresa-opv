@@ -3,6 +3,7 @@ import "./globals.css"
 import Image from "next/image"
 import Providers from "./providers"
 import SiteHeader from "@/components/SiteHeader"
+import FooterGate from "@/components/FooterGate"
 
 export const metadata = {
   title: "Operadora Balles",
@@ -27,9 +28,9 @@ function SiteFooter() {
         <div className="relative mx-auto max-w-7xl px-6 py-12">
           <div className="grid gap-10 md:grid-cols-3">
             <div>
-              <div className="text-xl font-extrabold">Operado</div>
+              <div className="text-xl font-extrabold">OPb</div>
               <p className="mt-3 text-sm text-white/85">
-                Catálogo interno para consultar productos, precios y generar pedidos de forma rápida.
+                Catálogo interno para consultar productoso, precios y generar pedidos de forma rápida.
               </p>
 
               <div className="mt-5 flex items-center gap-3">
@@ -97,27 +98,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="absolute -bottom-56 left-8 h-[520px] w-[520px] rounded-full bg-rose-300/16 blur-[150px]" />
           </div>
 
+          {/* Header (se auto-oculta en /login) */}
           <SiteHeader />
 
-          {/* ✅ main seguro contra overflow */}
           <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-8 overflow-x-clip">
             {children}
           </main>
 
-          {/* WhatsApp */}
-          <a
-            href="https://wa.me/5217715565797"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="WhatsApp"
-            className="fixed bottom-5 right-5 z-50 transition hover:-translate-y-1"
-          >
-            <div className="relative h-16 w-16 rounded-full bg-white/80 backdrop-blur shadow-[0_20px_45px_-20px_rgba(0,0,0,0.25)] hover:shadow-[0_28px_65px_-25px_rgba(0,0,0,0.35)]">
-              <Image src="/icons/whatsapp.png" alt="WhatsApp" fill className="object-contain" priority />
-            </div>
-          </a>
+          {/* Footer + WhatsApp NO salen en /login */}
+          <FooterGate>
+            <a
+              href="https://wa.me/5217715565797"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="WhatsApp"
+              className="fixed bottom-5 right-5 z-50 transition hover:-translate-y-1"
+            >
+              <div className="relative h-16 w-16 rounded-full bg-white/80 backdrop-blur shadow-[0_20px_45px_-20px_rgba(0,0,0,0.25)] hover:shadow-[0_28px_65px_-25px_rgba(0,0,0,0.35)]">
+                <Image src="/icons/whatsapp.png" alt="WhatsApp" fill className="object-contain" priority />
+              </div>
+            </a>
 
-          <SiteFooter />
+            <SiteFooter />
+          </FooterGate>
         </Providers>
       </body>
     </html>

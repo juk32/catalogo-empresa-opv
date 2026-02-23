@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { User, LogOut, Settings, History } from "lucide-react"
+import { signOut, useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 function cx(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ")
@@ -20,6 +22,14 @@ function rubberBand(distance: number, dimension: number, k = 0.55) {
 }
 
 export default function UserMenu() {
+  const router = useRouter()
+  const { data: session, status } = useSession()
+
+  const isAuthed = status === "authenticated"
+  const userName = session?.user?.name ?? session?.user?.email ?? "Usuario"
+  // Si no tienes "role" en session, cae a USER sin romper nada
+  const userRole = (session as any)?.user?.role ?? "USER"
+
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const btnRef = useRef<HTMLButtonElement | null>(null)
@@ -40,10 +50,6 @@ export default function UserMenu() {
   const draggingRef = useRef(false)
   const startYRef = useRef(0)
   const sheetScrollRef = useRef<HTMLDivElement | null>(null)
-
-  // ⚠️ Ajusta esto a tu lógica real (auth)
-  const userName = "Admin"
-  const userRole = "ADMIN"
 
   useEffect(() => setMounted(true), [])
 
@@ -191,6 +197,12 @@ export default function UserMenu() {
     return t
   }, [dragY, isMobile, vh])
 
+  async function doLogout() {
+    setOpen(false)
+    await signOut({ callbackUrl: "/login" })
+    router.refresh()
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -252,35 +264,46 @@ export default function UserMenu() {
                       <div className="px-3 pb-3">
                         <div className="rounded-2xl border border-white/45 bg-white/60 p-3">
                           <div className="text-sm font-bold text-slate-900">{userName}</div>
-                          <div className="text-xs text-slate-600">{userRole}</div>
+                          <div className="text-xs text-slate-600">{isAuthed ? userRole : "Invitado"}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div ref={sheetScrollRef} className="px-3 pb-3 overflow-y-auto" style={{ maxHeight: "calc(84vh - 112px)" }}>
+                    <div
+                      ref={sheetScrollRef}
+                      className="px-3 pb-3 overflow-y-auto"
+                      style={{ maxHeight: "calc(84vh - 112px)" }}
+                    >
                       <div className="grid gap-1">
-                        <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
-                          Historial de pedidos
-                        </MenuLink>
+                        {!isAuthed ? (
+                          <MenuLink href="/login" icon={<User size={16} />} onPick={() => setOpen(false)}>
+                            Iniciar sesión
+                          </MenuLink>
+                        ) : (
+                          <>
+                            <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
+                              Historial de pedidos
+                            </MenuLink>
 
-                        <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
-                          Administrar catálogo
-                        </MenuLink>
+                            {userRole === "ADMIN" && (
+                              <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
+                                Administrar catálogo
+                              </MenuLink>
+                            )}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpen(false)
-                            window.location.href = "/logout"
-                          }}
-                          className={cx(
-                            "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-                            "text-rose-700 hover:bg-rose-50"
-                          )}
-                        >
-                          <LogOut size={16} />
-                          Cerrar sesión
-                        </button>
+                            <button
+                              type="button"
+                              onClick={doLogout}
+                              className={cx(
+                                "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+                                "text-rose-700 hover:bg-rose-50"
+                              )}
+                            >
+                              <LogOut size={16} />
+                              Cerrar sesión
+                            </button>
+                          </>
+                        )}
                       </div>
 
                       <div className="pointer-events-none sticky bottom-0 h-10 bg-gradient-to-t from-white/90 to-transparent" />
@@ -323,32 +346,39 @@ export default function UserMenu() {
                   <div className="p-3">
                     <div className="rounded-2xl border border-white/45 bg-white/60 p-3">
                       <div className="text-sm font-bold text-slate-900">{userName}</div>
-                      <div className="text-xs text-slate-600">{userRole}</div>
+                      <div className="text-xs text-slate-600">{isAuthed ? userRole : "Invitado"}</div>
                     </div>
 
                     <div className="mt-3 grid gap-1">
-                      <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
-                        Historial de pedidos
-                      </MenuLink>
+                      {!isAuthed ? (
+                        <MenuLink href="/login" icon={<User size={16} />} onPick={() => setOpen(false)}>
+                          Iniciar sesión
+                        </MenuLink>
+                      ) : (
+                        <>
+                          <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
+                            Historial de pedidos
+                          </MenuLink>
 
-                      <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
-                        Administrar catálogo
-                      </MenuLink>
+                          {userRole === "ADMIN" && (
+                            <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
+                              Administrar catálogo
+                            </MenuLink>
+                          )}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpen(false)
-                          window.location.href = "/logout"
-                        }}
-                        className={cx(
-                          "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-                          "text-rose-700 hover:bg-rose-50"
-                        )}
-                      >
-                        <LogOut size={16} />
-                        Cerrar sesión
-                      </button>
+                          <button
+                            type="button"
+                            onClick={doLogout}
+                            className={cx(
+                              "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+                              "text-rose-700 hover:bg-rose-50"
+                            )}
+                          >
+                            <LogOut size={16} />
+                            Cerrar sesión
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
