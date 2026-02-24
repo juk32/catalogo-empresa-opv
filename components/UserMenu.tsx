@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -64,13 +64,15 @@ export default function UserMenu() {
   const [mounted, setMounted] = useState(false)
   const [btnRect, setBtnRect] = useState<BtnRect>({ top: 0, bottom: 0, left: 0, right: 0 })
   const [panelH, setPanelH] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
-  const [preferUp, setPreferUp] = useState(false)
 
   const [vw, setVw] = useState(1024)
   const [vh, setVh] = useState(768)
 
-  // mobile drag sheet
+  // ✅ en vez de solo móvil (<640), usamos sheet también en tablet (<1024)
+  const [isSheet, setIsSheet] = useState(false)
+  const [preferUp, setPreferUp] = useState(false)
+
+  // drag sheet
   const [dragY, setDragY] = useState(0)
   const draggingRef = useRef(false)
   const startYRef = useRef(0)
@@ -84,7 +86,7 @@ export default function UserMenu() {
       const h = window.innerHeight || 768
       setVw(w)
       setVh(h)
-      setIsMobile(w < 640)
+      setIsSheet(w < 1024) // ✅ móvil + tablet
     }
     calc()
     window.addEventListener("resize", calc)
@@ -125,11 +127,11 @@ export default function UserMenu() {
       setPanelH(h)
     })
     return () => cancelAnimationFrame(raf)
-  }, [open, isMobile])
+  }, [open, isSheet])
 
   useEffect(() => {
     if (!open) return
-    if (isMobile) {
+    if (isSheet) {
       setPreferUp(false)
       return
     }
@@ -137,7 +139,7 @@ export default function UserMenu() {
     const spaceBelow = vh - btnRect.bottom
     const needsUp = panelH > 0 && spaceBelow < panelH + margin
     setPreferUp(needsUp)
-  }, [open, isMobile, btnRect.bottom, panelH, vh])
+  }, [open, isSheet, btnRect.bottom, panelH, vh])
 
   useEffect(() => {
     if (!open) return
@@ -169,7 +171,7 @@ export default function UserMenu() {
   }
 
   function onSheetPointerDown(e: React.PointerEvent) {
-    if (!isMobile) return
+    if (!isSheet) return
     if (!canDragFromScrollTop()) return
     draggingRef.current = true
     startYRef.current = e.clientY
@@ -177,19 +179,19 @@ export default function UserMenu() {
   }
 
   function onSheetPointerMove(e: React.PointerEvent) {
-    if (!isMobile) return
+    if (!isSheet) return
     if (!draggingRef.current) return
     const delta = e.clientY - startYRef.current
     if (delta <= 0) {
       setDragY(0)
       return
     }
-    const dim = Math.max(320, vh)
+    const dim = Math.max(360, vh)
     setDragY(rubberBand(delta, dim, 0.6))
   }
 
   function onSheetPointerUp() {
-    if (!isMobile) return
+    if (!isSheet) return
     if (!draggingRef.current) return
     draggingRef.current = false
     const threshold = Math.max(110, Math.min(180, vh * 0.18))
@@ -215,12 +217,6 @@ export default function UserMenu() {
     return { left, top, width: maxW }
   }, [btnRect.right, btnRect.bottom, btnRect.top, preferUp, panelH, vw])
 
-  const overlayOpacity = useMemo(() => {
-    if (!isMobile) return 1
-    const t = clamp(1 - dragY / (vh * 0.6 || 600), 0.15, 1)
-    return t
-  }, [dragY, isMobile, vh])
-
   async function doLogout() {
     setOpen(false)
     await signOut({ callbackUrl: "/login" })
@@ -231,17 +227,17 @@ export default function UserMenu() {
 
   return (
     <div ref={rootRef} className="relative">
-      {/* ✅ Botón (estilo mini header como tu imagen) */}
+      {/* ✅ Botón: ahora sólido (sin transparencia) */}
       <button
         ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cx(
           "group flex items-center gap-2 h-10 rounded-2xl pl-2 pr-2.5",
-          "border border-white/45 bg-white/55 backdrop-blur-xl",
-          "shadow-[0_14px_44px_-30px_rgba(2,6,23,.45)]",
+          "border border-slate-200 bg-white", // ✅ sólido
+          "shadow-[0_16px_44px_-34px_rgba(2,6,23,.38)]",
           "transition",
-          "hover:bg-white/75 hover:ring-1 hover:ring-sky-300/70 hover:shadow-[0_0_26px_rgba(56,189,248,.25)]",
+          "hover:ring-1 hover:ring-sky-200 hover:shadow-[0_0_26px_rgba(56,189,248,.18)]",
           "active:scale-[0.99]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80"
         )}
@@ -251,8 +247,7 @@ export default function UserMenu() {
         <span
           className={cx(
             "grid h-8 w-8 place-items-center rounded-xl",
-            "border border-white/55 bg-white/70",
-            "shadow-[0_12px_30px_-22px_rgba(2,6,23,.55)]"
+            "border border-slate-200 bg-slate-50" // ✅ sólido
           )}
         >
           <span className="text-[11px] font-extrabold text-slate-800">
@@ -279,26 +274,29 @@ export default function UserMenu() {
       {mounted && open
         ? createPortal(
             <>
-              {/* overlay */}
+              {/* ✅ overlay sólido (sin blur/transparencia) */}
               <div
-                className="fixed inset-0 z-[9998] usermenu-overlay"
-                style={{ opacity: overlayOpacity }}
+                className="fixed inset-0 z-[9998]"
+                style={{
+                  background: "rgba(2,6,23,.55)", // ✅ más oscuro, ya no se mezcla atrás
+                  transition: "opacity 180ms ease",
+                }}
                 onClick={() => setOpen(false)}
                 aria-hidden="true"
               />
 
-              {isMobile ? (
-                /* ✅ MOBILE sheet (mismo diseño) */
+              {isSheet ? (
+                /* ✅ SHEET: móvil + tablet (sin transparencia) */
                 <div className="fixed inset-x-0 bottom-0 z-[9999] px-3 pb-3">
                   <div
                     ref={panelRef}
                     className={cx(
-                      "usermenu-sheet w-full overflow-hidden rounded-[26px]",
-                      "border border-white/60 bg-white/92 backdrop-blur-xl",
-                      "shadow-[0_34px_110px_-70px_rgba(2,6,23,.85)]"
+                      "w-full overflow-hidden rounded-[26px]",
+                      "border border-slate-200 bg-white", // ✅ sólido
+                      "shadow-[0_34px_120px_-70px_rgba(2,6,23,.85)]"
                     )}
                     style={{
-                      maxHeight: "84vh",
+                      maxHeight: "86vh",
                       transform: `translateY(${dragY}px)`,
                       transition: draggingRef.current ? "none" : "transform 220ms cubic-bezier(.2,.9,.2,1)",
                     }}
@@ -328,7 +326,7 @@ export default function UserMenu() {
                     <div
                       ref={sheetScrollRef}
                       className="px-4 pb-4 overflow-y-auto"
-                      style={{ maxHeight: "calc(84vh - 124px)" }}
+                      style={{ maxHeight: "calc(86vh - 124px)" }}
                     >
                       <MenuSections
                         isAuthed={isAuthed}
@@ -336,17 +334,11 @@ export default function UserMenu() {
                         onPick={() => setOpen(false)}
                         onLogout={doLogout}
                       />
-                      <div className="pointer-events-none sticky bottom-0 h-10 bg-gradient-to-t from-white/90 to-transparent" />
+                      <div className="pointer-events-none sticky bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
                     </div>
                   </div>
 
                   <style>{`
-                    .usermenu-overlay{
-                      background: rgba(2,6,23,.20);
-                      backdrop-filter: blur(14px);
-                      -webkit-backdrop-filter: blur(14px);
-                      transition: opacity 180ms ease;
-                    }
                     @keyframes sheetIn {
                       from { opacity: 0; transform: translateY(18px) scale(.985); }
                       to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -354,19 +346,18 @@ export default function UserMenu() {
                     .usermenu-sheet{ animation: sheetIn 180ms ease-out both; }
                     @media (prefers-reduced-motion: reduce) {
                       .usermenu-sheet { animation: none !important; }
-                      .usermenu-overlay { transition: none !important; }
                     }
                   `}</style>
                 </div>
               ) : (
-                /* ✅ DESKTOP dropdown tipo la imagen */
+                /* ✅ DESKTOP dropdown */
                 <div
                   ref={panelRef}
                   className={cx(
                     "fixed z-[9999]",
                     "overflow-hidden rounded-2xl",
-                    "border border-white/55 bg-white/88 backdrop-blur-xl",
-                    "shadow-[0_42px_130px_-78px_rgba(2,6,23,.95)]",
+                    "border border-slate-200 bg-white", // ✅ sólido
+                    "shadow-[0_42px_140px_-88px_rgba(2,6,23,.95)]",
                     preferUp ? "origin-bottom-right" : "origin-top-right",
                     "menu-in"
                   )}
@@ -374,9 +365,6 @@ export default function UserMenu() {
                   role="dialog"
                   aria-modal="true"
                 >
-                  {/* top glow */}
-                  <div className="pointer-events-none absolute -top-28 left-1/2 h-44 w-[540px] -translate-x-1/2 rounded-full bg-sky-300/18 blur-[90px]" />
-
                   <div className="relative">
                     <HeaderCard
                       userName={userName}
@@ -439,17 +427,16 @@ function HeaderCard({
       <div
         className={cx(
           "rounded-2xl p-3",
-          "border border-white/55",
-          "bg-gradient-to-b from-white/75 to-white/55",
-          "shadow-[0_18px_55px_-45px_rgba(2,6,23,.55)]"
+          "border border-slate-200",
+          "bg-slate-50", // ✅ sólido
+          "shadow-[0_18px_55px_-50px_rgba(2,6,23,.35)]"
         )}
       >
         <div className="flex items-center gap-3">
           <div
             className={cx(
               "h-11 w-11 rounded-2xl grid place-items-center",
-              "border border-white/60 bg-white/75",
-              "shadow-[0_16px_34px_-26px_rgba(2,6,23,.65)]"
+              "border border-slate-200 bg-white"
             )}
           >
             <span className="text-[12px] font-extrabold text-slate-800">{initialsText}</span>
@@ -462,7 +449,7 @@ function HeaderCard({
                 className={cx(
                   "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold border",
                   !isAuthed
-                    ? "border-slate-200 bg-slate-50 text-slate-700"
+                    ? "border-slate-200 bg-white text-slate-700"
                     : roleText === "Administrador"
                     ? "border-amber-200 bg-amber-50 text-amber-800"
                     : "border-sky-200 bg-sky-50 text-sky-800"
@@ -473,7 +460,7 @@ function HeaderCard({
             </div>
           </div>
 
-          <div className="ml-auto hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-white/55 bg-white/60">
+          <div className="ml-auto hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white">
             <User size={18} className="text-slate-700" />
           </div>
         </div>
@@ -495,7 +482,6 @@ function MenuSections({
 }) {
   return (
     <div className="grid gap-2">
-      {/* Section: Cuenta */}
       <SectionLabel>Cuenta</SectionLabel>
 
       {!isAuthed ? (
@@ -508,10 +494,6 @@ function MenuSections({
             Historial de pedidos
           </MenuLink>
 
-          {/* Estos 2 son “placeholder” visual tipo tu imagen,
-              pero si NO tienes esas rutas, bórralos.
-              No agregan funcionalidad si no existen.
-          */}
           <MenuLink href="/mi-cuenta" icon={<Settings size={16} />} onPick={onPick}>
             Mi perfil
           </MenuLink>
@@ -526,7 +508,6 @@ function MenuSections({
         </>
       )}
 
-      {/* Section: Admin */}
       {isAuthed && userRole === "ADMIN" && (
         <>
           <div className="pt-1" />
@@ -538,23 +519,22 @@ function MenuSections({
         </>
       )}
 
-      {/* Logout */}
       {isAuthed && (
         <button
           type="button"
           onClick={onLogout}
           className={cx(
             "mt-1 flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3",
-            "border border-rose-200 bg-gradient-to-r from-rose-500/12 to-white/60",
+            "border border-rose-200 bg-rose-50",
             "text-rose-800 font-extrabold",
-            "hover:shadow-[0_0_24px_rgba(244,63,94,.22)] active:scale-[0.99]"
+            "hover:shadow-[0_0_24px_rgba(244,63,94,.16)] active:scale-[0.99]"
           )}
         >
           <span className="flex items-center gap-2">
             <LogOut size={16} />
             Cerrar sesión
           </span>
-          <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-white/70 border border-white/60">
+          <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-white border border-rose-200">
             Salir
           </span>
         </button>
@@ -588,9 +568,9 @@ function MenuLink({
       onClick={onPick}
       className={cx(
         "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3",
-        "border border-white/55 bg-white/60 backdrop-blur",
-        "shadow-[0_12px_38px_-30px_rgba(2,6,23,.45)]",
-        "hover:bg-sky-500/10 hover:shadow-[0_0_22px_rgba(56,189,248,.22)]",
+        "border border-slate-200 bg-white", // ✅ sólido
+        "shadow-[0_12px_30px_-26px_rgba(2,6,23,.28)]",
+        "hover:bg-sky-50 hover:border-sky-200",
         "active:scale-[0.99]"
       )}
     >
@@ -599,7 +579,7 @@ function MenuLink({
         <span className="text-sm font-extrabold text-slate-900">{children}</span>
       </span>
 
-      <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-white/70 border border-white/60 text-slate-700">
+      <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-700">
         Ir
       </span>
     </Link>
