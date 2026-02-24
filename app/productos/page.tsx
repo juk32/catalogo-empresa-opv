@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { motion } from "framer-motion"
 
 type Product = {
   id: string
@@ -49,7 +48,7 @@ function Stars({ value }: { value: number }) {
 }
 
 /* =========================
-   Card estilo "Amazon Pro"
+   Product Card (fijo)
 ========================= */
 function ProductCard({ p, i }: { p: Product; i: number }) {
   const stock = Number(p.stock ?? 0)
@@ -63,74 +62,108 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
   return (
     <Link
       href={`/producto/${encodeURIComponent(p.id)}`}
-      className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition
-                 hover:-translate-y-[2px] hover:shadow-md"
+      className={cn(
+        "group relative block h-full overflow-hidden rounded-2xl",
+        "bg-white/80 backdrop-blur border border-white/60 ring-1 ring-slate-200/70",
+        "shadow-[0_18px_60px_-40px_rgba(15,23,42,.45)]",
+        "transition active:scale-[0.99] md:hover:-translate-y-[2px] md:hover:shadow-[0_26px_90px_-55px_rgba(15,23,42,.55)]"
+      )}
       style={{ animationDelay: `${Math.min(i * 25, 220)}ms` }}
+      draggable={false}
     >
-      <div className="relative">
-        <div className="aspect-[4/3] w-full bg-white">
+      {/* Fondo efecto */}
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(56,189,248,.9), rgba(99,102,241,.8), rgba(244,63,94,.75))",
+          }}
+        />
+        <div className="absolute inset-0 opacity-[0.08] mix-blend-multiply [background-size:18px_18px] [background-image:linear-gradient(135deg,rgba(15,23,42,.2)_25%,transparent_25%,transparent_50%,rgba(15,23,42,.2)_50%,rgba(15,23,42,.2)_75%,transparent_75%,transparent)]" />
+      </div>
+
+      {/* brillo hover desktop */}
+      <div className="pointer-events-none absolute inset-0 hidden md:block">
+        <div className="absolute -left-1/2 top-0 h-full w-[60%] rotate-12 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="h-full w-full blur-[2px] [background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)]" />
+        </div>
+      </div>
+
+      <div className="relative flex h-full flex-col">
+        <div className="relative h-[170px]">
+          <div className="absolute inset-0 bg-white/55" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={safeImg(p.image)}
             alt={p.name}
-            className="h-full w-full object-contain p-5 transition-transform duration-200 group-hover:scale-[1.03]"
+            className="relative h-full w-full object-contain p-5 transition-transform duration-300 md:group-hover:scale-[1.05]"
             loading="lazy"
+            draggable={false}
           />
-        </div>
 
-        <div className="absolute left-3 top-3">
-          <span className="rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
-            -{discountPct}%
-          </span>
-        </div>
-
-        <div className="absolute right-3 top-3">
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm border",
-              inStock
-                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                : "bg-slate-100 text-slate-700 border-slate-200"
-            )}
-          >
-            {inStock ? `En stock (${stock})` : "Agotado"}
-          </span>
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold text-sky-700">{p.category || "Sin categoría"}</span>
-          <span className="text-[11px] text-slate-500 font-mono">{p.id}</span>
-        </div>
-
-        <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold text-slate-900 group-hover:text-sky-700">
-          {p.name}
-        </h3>
-
-        <div className="mt-2 flex items-center gap-2">
-          <Stars value={p.rating} />
-          <span className="text-xs text-slate-500">({reviews.toLocaleString("es-MX")})</span>
-        </div>
-
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] text-slate-500">Precio</p>
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-extrabold tracking-tight text-slate-900">${money(p.price)}</div>
-              <div className="text-xs text-slate-400 line-through">${money(oldPrice)}</div>
-            </div>
-            <p className="mt-1 text-xs text-slate-600">{inStock ? "Entrega rápida disponible" : "Sin disponibilidad"}</p>
+          <div className="absolute left-3 top-3">
+            <span className="rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
+              -{discountPct}%
+            </span>
           </div>
 
-          <div className="shrink-0">
-            <div className="rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition group-hover:bg-sky-700">
-              Ver →
-            </div>
+          <div className="absolute right-3 top-3">
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm border",
+                inStock
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-slate-100 text-slate-700 border-slate-200"
+              )}
+            >
+              {inStock ? `En stock (${stock})` : "Agotado"}
+            </span>
           </div>
         </div>
 
-        <p className="mt-3 line-clamp-2 text-sm text-slate-600">{p.description || "Sin descripción."}</p>
+        <div className="flex flex-1 flex-col p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-sky-700">{p.category || "Sin categoría"}</span>
+            <span className="text-[11px] text-slate-500 font-mono">{p.id}</span>
+          </div>
+
+          <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold text-slate-900 md:group-hover:text-sky-700">
+            {p.name}
+          </h3>
+
+          <div className="mt-2 flex items-center gap-2">
+            <Stars value={p.rating} />
+            <span className="text-xs text-slate-500">({reviews.toLocaleString("es-MX")})</span>
+          </div>
+
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-slate-500">Precio</p>
+              <div className="flex items-baseline gap-2">
+                <div className="text-2xl font-extrabold tracking-tight text-slate-900">${money(p.price)}</div>
+                <div className="text-xs text-slate-400 line-through">${money(oldPrice)}</div>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">{inStock ? "Entrega rápida disponible" : "Sin disponibilidad"}</p>
+            </div>
+
+            <div className="shrink-0">
+              <div
+                className="rounded-full px-4 py-2 text-xs font-extrabold text-white shadow-sm transition md:group-hover:brightness-95"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.9), rgba(244,63,94,.85))",
+                }}
+              >
+                Ver →
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-auto pt-3">
+            <p className="line-clamp-2 text-sm text-slate-600">{p.description || "Sin descripción."}</p>
+          </div>
+        </div>
       </div>
     </Link>
   )
@@ -139,7 +172,7 @@ function ProductCard({ p, i }: { p: Product; i: number }) {
 function SkeletonCard() {
   return (
     <div className="animate-pulse overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="aspect-[4/3] bg-slate-100" />
+      <div className="h-[170px] bg-slate-100" />
       <div className="p-4 space-y-3">
         <div className="h-3 w-24 rounded bg-slate-200" />
         <div className="h-4 w-full rounded bg-slate-200" />
@@ -153,8 +186,6 @@ function SkeletonCard() {
 
 /* =========================
    Carrusel por familia
-   - Animaciones (sin afectar layout)
-   - Fade Neon Clear + flechas
 ========================= */
 function CategoryCarouselSection({
   title,
@@ -201,13 +232,7 @@ function CategoryCarouselSection({
   if (!items?.length) return null
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="relative"
-    >
+    <section className="relative">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-extrabold text-slate-500">Familia</div>
@@ -232,85 +257,74 @@ function CategoryCarouselSection({
           >
             ←
           </button>
-
-          <button
-            type="button"
-            onClick={() => scrollByAmount("right")}
-            disabled={!canRight}
-            className={cn(
-              "grid h-10 w-10 place-items-center rounded-full text-white transition hover:brightness-95",
-              !canRight ? "opacity-40 cursor-not-allowed" : "opacity-100"
-            )}
-            aria-label="Siguiente"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(56,189,248,.95), rgba(99,102,241,.92), rgba(244,63,94,.88))",
-            }}
-          >
-            →
-          </button>
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/75 backdrop-blur shadow-[0_30px_110px_-80px_rgba(15,23,42,.55)]">
-        {/* glows */}
-        <div className="pointer-events-none absolute -top-20 left-10 h-72 w-72 rounded-full bg-sky-200/35 blur-[90px]" />
-        <div className="pointer-events-none absolute -bottom-20 right-10 h-72 w-72 rounded-full bg-rose-200/35 blur-[100px]" />
+      <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 backdrop-blur ring-1 ring-slate-200 shadow-[0_30px_120px_-80px_rgba(15,23,42,.6)]">
+        <div className="pointer-events-none absolute -top-16 left-12 h-72 w-72 rounded-full bg-sky-200/35 blur-[95px]" />
+        <div className="pointer-events-none absolute -bottom-16 right-12 h-72 w-72 rounded-full bg-rose-200/35 blur-[105px]" />
 
-        {/* ✅ Fade edges Neon Clear (bonito) */}
+        {/* Fade RIGHT */}
         <div
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-20 transition-opacity",
+            "pointer-events-none absolute inset-y-0 right-0 z-10 w-28 transition-opacity",
+            canRight ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background:
+              "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,.92) 35%, rgba(255,255,255,0) 100%)",
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={() => scrollByAmount("right")}
+          disabled={!canRight}
+          className={cn(
+            "absolute right-5 top-1/2 z-20 -translate-y-1/2",
+            "grid h-11 w-11 place-items-center rounded-full",
+            "bg-white/90 backdrop-blur ring-1 ring-slate-200 shadow-[0_10px_30px_-18px_rgba(15,23,42,.6)]",
+            "transition hover:bg-white active:scale-[0.98]",
+            !canRight ? "opacity-40 cursor-not-allowed" : "opacity-100"
+          )}
+          aria-label="Siguiente"
+        >
+          ›
+        </button>
+
+        {/* Fade LEFT */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 z-10 w-20 transition-opacity",
             canLeft ? "opacity-100" : "opacity-0"
           )}
           style={{
             background:
-              "linear-gradient(to right, rgba(255,255,255,.96), rgba(255,255,255,0))",
-          }}
-        />
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-24 transition-opacity",
-            canRight ? "opacity-100" : "opacity-0"
-          )}
-          style={{
-            background:
-              "linear-gradient(to left, rgba(255,255,255,.96), rgba(255,255,255,0))",
-          }}
-        />
-        {/* tint suave encima del fade (azul/rojo) */}
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-28 transition-opacity",
-            canRight ? "opacity-100" : "opacity-0"
-          )}
-          style={{
-            background:
-              "linear-gradient(to left, rgba(56,189,248,.18), rgba(244,63,94,.12), rgba(255,255,255,0))",
+              "linear-gradient(to right, rgba(255,255,255,1) 0%, rgba(255,255,255,.9) 35%, rgba(255,255,255,0) 100%)",
           }}
         />
 
         <div
           ref={scrollerRef}
           className={cn(
-            "relative overflow-x-auto px-4 py-4",
-            "scroll-smooth",
+            "relative overflow-x-auto px-4 py-4 scroll-smooth",
+            "touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]",
             "[scrollbar-width:none] [-ms-overflow-style:none]",
             "[&::-webkit-scrollbar]:hidden"
           )}
         >
-          <div className="flex gap-4 snap-x snap-mandatory pr-12">
+          <div className="flex gap-4 snap-x snap-mandatory pr-16">
             {items.map((p, idx) => (
-              <motion.div
+              <div
                 key={p.id}
-                className="snap-start min-w-[260px] sm:min-w-[320px] lg:min-w-[340px]"
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.25, delay: Math.min(idx * 0.03, 0.18) }}
+                className={cn(
+                  "snap-start",
+                  "min-w-[240px] sm:min-w-[300px] lg:min-w-[340px]",
+                  "h-[510px] sm:h-[520px]"
+                )}
               >
                 <ProductCard p={p} i={startIndex + idx} />
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -322,7 +336,42 @@ function CategoryCarouselSection({
           </div>
         </div>
       </div>
-    </motion.section>
+    </section>
+  )
+}
+
+/* =========================
+   Grid por familia
+========================= */
+function CategoryGridSection({
+  title,
+  items,
+  startIndex = 0,
+}: {
+  title: string
+  items: Product[]
+  startIndex?: number
+}) {
+  if (!items?.length) return null
+
+  return (
+    <section className="relative">
+      <div className="mb-3">
+        <div className="text-[11px] font-extrabold text-slate-500">Familia</div>
+        <h2 className="text-xl font-extrabold text-slate-900">{title}</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          {items.length} producto{items.length === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((p, idx) => (
+          <div key={p.id} className="h-[520px]">
+            <ProductCard p={p} i={startIndex + idx} />
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -338,7 +387,21 @@ export default function ProductosPage() {
     "relevance"
   )
 
+  const [view, setView] = useState<"carousel" | "grid">("carousel")
+
   const [reloading, setReloading] = useState(false)
+
+  // ✅ Calcula el offset real del header para sticky (evita que “baje”)
+  useEffect(() => {
+    const setOffset = () => {
+      const header = document.querySelector("header")
+      const h = header ? Math.round(header.getBoundingClientRect().height) : 72
+      document.documentElement.style.setProperty("--header-offset", `${h}px`)
+    }
+    setOffset()
+    window.addEventListener("resize", setOffset)
+    return () => window.removeEventListener("resize", setOffset)
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -419,7 +482,7 @@ export default function ProductosPage() {
   }, [filtered])
 
   return (
-    <section className="relative w-full min-w-0 space-y-5 overflow-x-clip">
+    <section className="relative w-full min-w-0 space-y-5">
       {/* Fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-white" />
@@ -429,12 +492,7 @@ export default function ProductosPage() {
       </div>
 
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
-      >
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Catálogo</h1>
           <p className="mt-1 text-slate-600">Busca por nombre, categoría o ID.</p>
@@ -443,6 +501,29 @@ export default function ProductosPage() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-sm text-slate-600">
             {loading ? "Cargando…" : `${filtered.length} producto${filtered.length === 1 ? "" : "s"}`}
+          </div>
+
+          <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setView("carousel")}
+              className={cn(
+                "rounded-xl px-3 py-2 text-xs font-extrabold transition",
+                view === "carousel" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              Carrusel
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              className={cn(
+                "rounded-xl px-3 py-2 text-xs font-extrabold transition",
+                view === "grid" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              Cuadrícula
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -469,15 +550,10 @@ export default function ProductosPage() {
             Recargar
           </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Filtros */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
-        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-      >
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
           <select
             value={category}
@@ -491,9 +567,7 @@ export default function ProductosPage() {
             ))}
           </select>
 
-          <div className="hidden md:block text-sm text-slate-500 text-right">
-            Tip: usa el buscador para ID exacto o nombre.
-          </div>
+          <div className="hidden md:block text-sm text-slate-500 text-right">Tip: usa el buscador para ID exacto o nombre.</div>
         </div>
 
         {categories.length > 2 ? (
@@ -517,18 +591,12 @@ export default function ProductosPage() {
             })}
           </div>
         ) : null}
-      </motion.div>
+      </div>
 
-      {/* ✅ Buscador sticky: NO BAJA / NO HAY LAYOUT SHIFT */}
-      <div className="sticky top-[72px] z-30">
-        {/* min-h para estabilidad visual */}
-        <div className="min-h-[64px]">
-          <motion.div
-            initial={{ opacity: 0, y: 0 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
-          >
+      {/* Buscador sticky (NO baja) */}
+      <div className="sticky z-40" style={{ top: "var(--header-offset, 72px)" }}>
+        <div className="pt-2">
+          <div className="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur p-3 shadow-sm">
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
               <span className="text-slate-400">🔎</span>
               <input
@@ -546,7 +614,7 @@ export default function ProductosPage() {
                 </button>
               ) : null}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -563,14 +631,23 @@ export default function ProductosPage() {
         </div>
       ) : (
         <div className="space-y-10">
-          {grouped.map((g, sectionIdx) => (
-            <CategoryCarouselSection
-              key={g.category}
-              title={g.category}
-              items={g.items}
-              startIndex={sectionIdx * 1000}
-            />
-          ))}
+          {grouped.map((g, sectionIdx) =>
+            view === "carousel" ? (
+              <CategoryCarouselSection
+                key={g.category}
+                title={g.category}
+                items={g.items}
+                startIndex={sectionIdx * 1000}
+              />
+            ) : (
+              <CategoryGridSection
+                key={g.category}
+                title={g.category}
+                items={g.items}
+                startIndex={sectionIdx * 1000}
+              />
+            )
+          )}
         </div>
       )}
 

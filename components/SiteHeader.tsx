@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import dynamic from "next/dynamic"
 import { useEffect, useMemo, useState } from "react"
-import { Menu, X, ShoppingCart, Search, ArrowRight, User } from "lucide-react"
+import { Menu, X, ShoppingCart, ArrowRight, User } from "lucide-react"
 
 // ✅ NO SSR para evitar window/doc en server
 const UserMenu = dynamic(() => import("@/components/UserMenu"), { ssr: false })
@@ -45,15 +45,24 @@ export default function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
+  // ✅ Animación de entrada (solo 1 vez al montar)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setMounted(true), 30)
+    return () => window.clearTimeout(t)
+  }, [])
+
   return (
     <header
       className={cx(
         "sticky top-0 z-50 w-full",
         "bg-white/85 backdrop-blur-xl",
-        "border-b border-slate-200/70"
+        "border-b border-slate-200/70",
+        mounted ? "ob-header-enter" : "opacity-0 -translate-y-3",
+        scrolled && "ob-header-scrolled"
       )}
     >
-      {/* Glow rojo sutil (clean, pero con vibe) */}
+      {/* Glow rojo sutil */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-20">
         <div className="absolute left-1/2 top-0 h-20 w-[980px] -translate-x-1/2 rounded-full bg-rose-300/25 blur-3xl" />
         <div className="absolute right-10 top-2 h-20 w-72 rounded-full bg-red-300/15 blur-3xl" />
@@ -67,12 +76,10 @@ export default function SiteHeader() {
               className={cx(
                 "relative grid h-9 w-9 place-items-center rounded-2xl",
                 "bg-gradient-to-br from-rose-500 via-red-600 to-rose-700",
-                // 3D look
                 "shadow-[0_18px_30px_-14px_rgba(244,63,94,0.55),0_10px_18px_-14px_rgba(2,6,23,0.35)]"
               )}
             >
               <span className="relative z-10 text-sm font-black text-white">OB</span>
-              {/* highlight */}
               <span className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/40" />
               <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/25 to-transparent" />
             </div>
@@ -113,15 +120,6 @@ export default function SiteHeader() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Search (desktop only) */}
-            <div className="hidden lg:flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <Search size={16} className="text-slate-500" />
-              <input
-                className="w-44 bg-transparent text-sm outline-none placeholder:text-slate-400"
-                placeholder="Buscar…"
-              />
-            </div>
-
             {/* Carrito (neutral) */}
             <Link
               href="/carrito"
@@ -177,12 +175,6 @@ export default function SiteHeader() {
             <div className="pointer-events-none absolute -bottom-20 right-6 h-44 w-64 rounded-full bg-rose-400/18 blur-3xl" />
 
             <div className="relative p-4 space-y-3">
-              {/* Search mobile */}
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-3 py-3 shadow-sm">
-                <Search size={18} className="text-slate-500" />
-                <input className="w-full bg-transparent text-sm outline-none" placeholder="Buscar productos…" />
-              </div>
-
               {/* CTAs (bonito 3D) */}
               <div className="grid grid-cols-2 gap-2">
                 {/* Botón rojo principal */}
@@ -199,7 +191,6 @@ export default function SiteHeader() {
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     Ver Catálogo <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
                   </span>
-                  {/* shine */}
                   <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/25 to-transparent" />
                   <span className="pointer-events-none absolute -left-10 top-0 h-full w-24 rotate-12 bg-white/20 blur-xl opacity-70" />
                 </Link>
@@ -216,11 +207,7 @@ export default function SiteHeader() {
                 {/* Cuenta */}
                 <button
                   type="button"
-                  onClick={() => {
-                    // solo cerramos y dejas que el UserMenu maneje su propio UI
-                    setOpen(false)
-                    // si quieres, aquí puedes navegar a /cuenta si tienes esa ruta
-                  }}
+                  onClick={() => setOpen(false)}
                   className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 py-3 text-sm font-semibold shadow-sm transition hover:bg-white active:scale-[0.99]"
                 >
                   <User size={18} />
@@ -251,7 +238,7 @@ export default function SiteHeader() {
                 })}
               </div>
 
-              {/* UserMenu inside mobile sheet (bonito) */}
+              {/* UserMenu inside mobile sheet */}
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
                 <div className="text-xs font-semibold text-slate-500 mb-1">Mi cuenta</div>
                 <UserMenu />

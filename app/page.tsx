@@ -519,9 +519,9 @@ function SubscribeBlock() {
   return (
     <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-slate-200 shadow-[0_26px_90px_-70px_rgba(15,23,42,.35)] p-8 text-center">
       <div className="text-[11px] font-extrabold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 bg-clip-text text-transparent">
-        SUBSCRIBE
+        SUBSCRIBETE
       </div>
-      <div className="mt-2 text-2xl font-extrabold text-slate-900">Subscribe To Get The Latest News About Us</div>
+      <div className="mt-2 text-2xl font-extrabold text-slate-900">Subscribete para recibir las Ultimas Noticias Us</div>
       <p className="mt-2 text-sm text-slate-500">
         Déjanos tu correo para recibir actualizaciones de productos y mejoras del catálogo.
       </p>
@@ -611,9 +611,9 @@ export default function HomePage() {
   const testimonials: Testimonial[] = useMemo(
     () => [
       {
-        name: "Emily Stones",
-        role: "CEO, Marketing Guru",
-        text: "Thank You for your service. I am very pleased with the result. I have seen exponential growth in my business and it is all thanks to your amazing service.",
+        name: "EmilI Perez",
+        role: "Chef, El Sabor del Cehf",
+        text: "Gracias por su excelente servicio. muy satifecho con los resultados. Tengo un crecimiento exponencial en mi negocio y eso es gracias a su servicio.",
       },
       {
         name: "Carlos Hernández",

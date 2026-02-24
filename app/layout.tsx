@@ -50,7 +50,7 @@ function SiteFooter() {
                 </div>
 
                 <p className="mt-3 text-sm text-slate-600 max-w-md">
-                  Catálogo interno para consultar productos, precios y generar pedidos de forma rápida.
+                  Consulta Interna de productos, precios y generación de pedidos de forma rápida.
                 </p>
 
                 <div className="mt-4 flex flex-wrap items-center gap-6 text-sm text-slate-700">
@@ -58,7 +58,7 @@ function SiteFooter() {
                     +52 45-4582-1314
                   </a>
                   <a href="mailto:example@outlook.com" className="hover:underline underline-offset-4">
-                    example@outlook.com
+                    Operadoraballes@outlook.com
                   </a>
                 </div>
 
@@ -78,9 +78,9 @@ function SiteFooter() {
 
               {/* Derecha */}
               <div className="md:col-span-5 md:col-start-8">
-                <div className="text-sm font-semibold text-slate-900">Newsletter</div>
+                <div className="text-sm font-semibold text-slate-900">Correo Electronico</div>
                 <p className="mt-2 text-sm text-slate-600">
-                  Recibe actualizaciones y novedades del catálogo.
+                  Recibe actualizaciones y novedades de nuevos productos.
                 </p>
 
                 {/* ✅ Sin onSubmit */}
@@ -104,7 +104,7 @@ function SiteFooter() {
                 </form>
 
                 <div className="mt-4 flex items-center gap-3">
-                  {["wa", "ig", "f", "yt"].map((s) => (
+                  {["WA", "IG", "F", "YT"].map((s) => (
                     <a
                       key={s}
                       href="#"
@@ -120,7 +120,7 @@ function SiteFooter() {
 
             {/* Barra inferior */}
             <div className="mt-6 border-t border-slate-200/80 pt-4 text-xs text-slate-500 flex flex-col gap-2 md:flex-row md:justify-between">
-              <span>© {new Date().getFullYear()} Operadora Balles</span>
+              <span>© {new Date().getFullYear()} Operadora Balles. All Right Reservers</span>
               <div className="flex gap-4">
                 <a href="/privacidad" className="hover:text-slate-900 hover:underline underline-offset-4">
                   Privacidad

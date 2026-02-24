@@ -3,9 +3,17 @@
 import Link from "next/link"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { User, LogOut, Settings, History } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import {
+  User,
+  ChevronDown,
+  History,
+  Settings,
+  LogOut,
+  SlidersHorizontal,
+  KeyRound,
+} from "lucide-react"
 
 function cx(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ")
@@ -21,13 +29,31 @@ function rubberBand(distance: number, dimension: number, k = 0.55) {
   return (distance * dimension * k) / (dimension + k * distance)
 }
 
+function initials(name: string) {
+  const t = (name || "").trim()
+  if (!t) return "U"
+  const parts = t.split(/\s+/).slice(0, 2)
+  const a = parts[0]?.[0] ?? "U"
+  const b = parts[1]?.[0] ?? ""
+  return (a + b).toUpperCase()
+}
+
+function roleLabel(role: string) {
+  if (role === "ADMIN") return "Administrador"
+  return "Usuario"
+}
+
+function rolePill(role: string, isAuthed: boolean) {
+  if (!isAuthed) return "Invitado"
+  return roleLabel(role)
+}
+
 export default function UserMenu() {
   const router = useRouter()
   const { data: session, status } = useSession()
 
   const isAuthed = status === "authenticated"
   const userName = session?.user?.name ?? session?.user?.email ?? "Usuario"
-  // Si no tienes "role" en session, cae a USER sin romper nada
   const userRole = (session as any)?.user?.role ?? "USER"
 
   const [open, setOpen] = useState(false)
@@ -41,11 +67,10 @@ export default function UserMenu() {
   const [isMobile, setIsMobile] = useState(false)
   const [preferUp, setPreferUp] = useState(false)
 
-  // ✅ viewport state (NO window en render)
   const [vw, setVw] = useState(1024)
   const [vh, setVh] = useState(768)
 
-  // Sheet drag state (mobile)
+  // mobile drag sheet
   const [dragY, setDragY] = useState(0)
   const draggingRef = useRef(false)
   const startYRef = useRef(0)
@@ -53,7 +78,6 @@ export default function UserMenu() {
 
   useEffect(() => setMounted(true), [])
 
-  // ✅ medir viewport solo en cliente
   useEffect(() => {
     const calc = () => {
       const w = window.innerWidth || 1024
@@ -136,9 +160,7 @@ export default function UserMenu() {
     }
   }, [open])
 
-  useEffect(() => {
-    setDragY(0)
-  }, [open])
+  useEffect(() => setDragY(0), [open])
 
   function canDragFromScrollTop() {
     const sc = sheetScrollRef.current
@@ -178,16 +200,18 @@ export default function UserMenu() {
     setDragY(0)
   }
 
-  // ✅ NO window en render
   const dropdownStyle = useMemo(() => {
     const margin = 12
-    const maxW = Math.min(340, Math.floor(vw * 0.92))
+    const maxW = Math.min(360, Math.floor(vw * 0.92))
 
     let left = btnRect.right - maxW
     if (left < margin) left = margin
     if (left + maxW > vw - margin) left = vw - maxW - margin
 
-    const top = preferUp ? Math.max(margin, btnRect.top - panelH - 10) : Math.max(margin, btnRect.bottom + 10)
+    const top = preferUp
+      ? Math.max(margin, btnRect.top - panelH - 10)
+      : Math.max(margin, btnRect.bottom + 10)
+
     return { left, top, width: maxW }
   }, [btnRect.right, btnRect.bottom, btnRect.top, preferUp, panelH, vw])
 
@@ -203,29 +227,59 @@ export default function UserMenu() {
     router.refresh()
   }
 
+  const roleText = rolePill(userRole, isAuthed)
+
   return (
     <div ref={rootRef} className="relative">
+      {/* ✅ Botón (estilo mini header como tu imagen) */}
       <button
         ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cx(
-          "group grid h-10 w-10 place-items-center rounded-xl",
-          "border border-white/45 bg-white/55 backdrop-blur",
+          "group flex items-center gap-2 h-10 rounded-2xl pl-2 pr-2.5",
+          "border border-white/45 bg-white/55 backdrop-blur-xl",
+          "shadow-[0_14px_44px_-30px_rgba(2,6,23,.45)]",
           "transition",
-          "hover:bg-sky-500/15 hover:shadow-[0_0_30px_rgba(56,189,248,.60)] hover:ring-1 hover:ring-sky-300/70",
-          "active:scale-[0.98]",
+          "hover:bg-white/75 hover:ring-1 hover:ring-sky-300/70 hover:shadow-[0_0_26px_rgba(56,189,248,.25)]",
+          "active:scale-[0.99]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80"
         )}
-        aria-label="Usuario"
+        aria-label="Cuenta"
         aria-expanded={open}
       >
-        <User size={18} className="text-slate-800" />
+        <span
+          className={cx(
+            "grid h-8 w-8 place-items-center rounded-xl",
+            "border border-white/55 bg-white/70",
+            "shadow-[0_12px_30px_-22px_rgba(2,6,23,.55)]"
+          )}
+        >
+          <span className="text-[11px] font-extrabold text-slate-800">
+            {isAuthed ? initials(userName) : "?"}
+          </span>
+        </span>
+
+        <span className="hidden sm:flex flex-col items-start leading-tight">
+          <span className="max-w-[140px] truncate text-[12px] font-extrabold text-slate-900">
+            {userName}
+          </span>
+          <span className="text-[11px] font-semibold text-slate-600">{roleText}</span>
+        </span>
+
+        <ChevronDown
+          size={16}
+          className={cx(
+            "hidden sm:block text-slate-700 transition-transform",
+            open ? "rotate-180" : "rotate-0"
+          )}
+        />
       </button>
 
       {mounted && open
         ? createPortal(
             <>
+              {/* overlay */}
               <div
                 className="fixed inset-0 z-[9998] usermenu-overlay"
                 style={{ opacity: overlayOpacity }}
@@ -234,12 +288,13 @@ export default function UserMenu() {
               />
 
               {isMobile ? (
+                /* ✅ MOBILE sheet (mismo diseño) */
                 <div className="fixed inset-x-0 bottom-0 z-[9999] px-3 pb-3">
                   <div
                     ref={panelRef}
                     className={cx(
                       "usermenu-sheet w-full overflow-hidden rounded-[26px]",
-                      "border border-white/55 bg-white/92 backdrop-blur-xl",
+                      "border border-white/60 bg-white/92 backdrop-blur-xl",
                       "shadow-[0_34px_110px_-70px_rgba(2,6,23,.85)]"
                     )}
                     style={{
@@ -250,6 +305,7 @@ export default function UserMenu() {
                     role="dialog"
                     aria-modal="true"
                   >
+                    {/* Grab + header */}
                     <div
                       className="cursor-grab active:cursor-grabbing select-none"
                       onPointerDown={onSheetPointerDown}
@@ -261,51 +317,25 @@ export default function UserMenu() {
                         <div className="h-1.5 w-12 rounded-full bg-slate-200" />
                       </div>
 
-                      <div className="px-3 pb-3">
-                        <div className="rounded-2xl border border-white/45 bg-white/60 p-3">
-                          <div className="text-sm font-bold text-slate-900">{userName}</div>
-                          <div className="text-xs text-slate-600">{isAuthed ? userRole : "Invitado"}</div>
-                        </div>
-                      </div>
+                      <HeaderCard
+                        userName={userName}
+                        roleText={roleText}
+                        isAuthed={isAuthed}
+                        initialsText={isAuthed ? initials(userName) : "?"}
+                      />
                     </div>
 
                     <div
                       ref={sheetScrollRef}
-                      className="px-3 pb-3 overflow-y-auto"
-                      style={{ maxHeight: "calc(84vh - 112px)" }}
+                      className="px-4 pb-4 overflow-y-auto"
+                      style={{ maxHeight: "calc(84vh - 124px)" }}
                     >
-                      <div className="grid gap-1">
-                        {!isAuthed ? (
-                          <MenuLink href="/login" icon={<User size={16} />} onPick={() => setOpen(false)}>
-                            Iniciar sesión
-                          </MenuLink>
-                        ) : (
-                          <>
-                            <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
-                              Historial de pedidos
-                            </MenuLink>
-
-                            {userRole === "ADMIN" && (
-                              <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
-                                Administrar catálogo
-                              </MenuLink>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={doLogout}
-                              className={cx(
-                                "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-                                "text-rose-700 hover:bg-rose-50"
-                              )}
-                            >
-                              <LogOut size={16} />
-                              Cerrar sesión
-                            </button>
-                          </>
-                        )}
-                      </div>
-
+                      <MenuSections
+                        isAuthed={isAuthed}
+                        userRole={userRole}
+                        onPick={() => setOpen(false)}
+                        onLogout={doLogout}
+                      />
                       <div className="pointer-events-none sticky bottom-0 h-10 bg-gradient-to-t from-white/90 to-transparent" />
                     </div>
                   </div>
@@ -329,13 +359,14 @@ export default function UserMenu() {
                   `}</style>
                 </div>
               ) : (
+                /* ✅ DESKTOP dropdown tipo la imagen */
                 <div
                   ref={panelRef}
                   className={cx(
                     "fixed z-[9999]",
-                    "w-[min(92vw,340px)] overflow-hidden",
-                    "rounded-2xl border border-white/40 bg-white/90 backdrop-blur-xl",
-                    "shadow-[0_40px_120px_-70px_rgba(0,0,0,.9)]",
+                    "overflow-hidden rounded-2xl",
+                    "border border-white/55 bg-white/88 backdrop-blur-xl",
+                    "shadow-[0_42px_130px_-78px_rgba(2,6,23,.95)]",
                     preferUp ? "origin-bottom-right" : "origin-top-right",
                     "menu-in"
                   )}
@@ -343,55 +374,37 @@ export default function UserMenu() {
                   role="dialog"
                   aria-modal="true"
                 >
-                  <div className="p-3">
-                    <div className="rounded-2xl border border-white/45 bg-white/60 p-3">
-                      <div className="text-sm font-bold text-slate-900">{userName}</div>
-                      <div className="text-xs text-slate-600">{isAuthed ? userRole : "Invitado"}</div>
-                    </div>
+                  {/* top glow */}
+                  <div className="pointer-events-none absolute -top-28 left-1/2 h-44 w-[540px] -translate-x-1/2 rounded-full bg-sky-300/18 blur-[90px]" />
 
-                    <div className="mt-3 grid gap-1">
-                      {!isAuthed ? (
-                        <MenuLink href="/login" icon={<User size={16} />} onPick={() => setOpen(false)}>
-                          Iniciar sesión
-                        </MenuLink>
-                      ) : (
-                        <>
-                          <MenuLink href="/pedidos" icon={<History size={16} />} onPick={() => setOpen(false)}>
-                            Historial de pedidos
-                          </MenuLink>
+                  <div className="relative">
+                    <HeaderCard
+                      userName={userName}
+                      roleText={roleText}
+                      isAuthed={isAuthed}
+                      initialsText={isAuthed ? initials(userName) : "?"}
+                    />
 
-                          {userRole === "ADMIN" && (
-                            <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={() => setOpen(false)}>
-                              Administrar catálogo
-                            </MenuLink>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={doLogout}
-                            className={cx(
-                              "mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-                              "text-rose-700 hover:bg-rose-50"
-                            )}
-                          >
-                            <LogOut size={16} />
-                            Cerrar sesión
-                          </button>
-                        </>
-                      )}
+                    <div className="px-3 pb-3">
+                      <MenuSections
+                        isAuthed={isAuthed}
+                        userRole={userRole}
+                        onPick={() => setOpen(false)}
+                        onLogout={doLogout}
+                      />
                     </div>
                   </div>
 
                   <style>{`
                     @keyframes menuInDown {
-                      from { opacity: 0; transform: translateY(-8px) scale(.985); }
+                      from { opacity: 0; transform: translateY(-10px) scale(.985); }
                       to   { opacity: 1; transform: translateY(0) scale(1); }
                     }
                     @keyframes menuInUp {
-                      from { opacity: 0; transform: translateY(8px) scale(.985); }
+                      from { opacity: 0; transform: translateY(10px) scale(.985); }
                       to   { opacity: 1; transform: translateY(0) scale(1); }
                     }
-                    .menu-in { animation: ${preferUp ? "menuInUp" : "menuInDown"} 160ms ease-out both; }
+                    .menu-in { animation: ${preferUp ? "menuInUp" : "menuInDown"} 170ms ease-out both; }
                     @media (prefers-reduced-motion: reduce) {
                       .menu-in { animation: none !important; }
                     }
@@ -402,6 +415,158 @@ export default function UserMenu() {
             document.body
           )
         : null}
+    </div>
+  )
+}
+
+/* =========================
+   Pieces
+========================= */
+
+function HeaderCard({
+  userName,
+  roleText,
+  isAuthed,
+  initialsText,
+}: {
+  userName: string
+  roleText: string
+  isAuthed: boolean
+  initialsText: string
+}) {
+  return (
+    <div className="px-3 pt-3 pb-2">
+      <div
+        className={cx(
+          "rounded-2xl p-3",
+          "border border-white/55",
+          "bg-gradient-to-b from-white/75 to-white/55",
+          "shadow-[0_18px_55px_-45px_rgba(2,6,23,.55)]"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={cx(
+              "h-11 w-11 rounded-2xl grid place-items-center",
+              "border border-white/60 bg-white/75",
+              "shadow-[0_16px_34px_-26px_rgba(2,6,23,.65)]"
+            )}
+          >
+            <span className="text-[12px] font-extrabold text-slate-800">{initialsText}</span>
+          </div>
+
+          <div className="min-w-0">
+            <div className="text-sm font-extrabold text-slate-900 truncate">{userName}</div>
+            <div className="mt-1">
+              <span
+                className={cx(
+                  "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold border",
+                  !isAuthed
+                    ? "border-slate-200 bg-slate-50 text-slate-700"
+                    : roleText === "Administrador"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-sky-200 bg-sky-50 text-sky-800"
+                )}
+              >
+                {roleText}
+              </span>
+            </div>
+          </div>
+
+          <div className="ml-auto hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-white/55 bg-white/60">
+            <User size={18} className="text-slate-700" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MenuSections({
+  isAuthed,
+  userRole,
+  onPick,
+  onLogout,
+}: {
+  isAuthed: boolean
+  userRole: string
+  onPick: () => void
+  onLogout: () => void
+}) {
+  return (
+    <div className="grid gap-2">
+      {/* Section: Cuenta */}
+      <SectionLabel>Cuenta</SectionLabel>
+
+      {!isAuthed ? (
+        <MenuLink href="/login" icon={<User size={16} />} onPick={onPick}>
+          Iniciar sesión
+        </MenuLink>
+      ) : (
+        <>
+          <MenuLink href="/pedidos" icon={<History size={16} />} onPick={onPick}>
+            Historial de pedidos
+          </MenuLink>
+
+          {/* Estos 2 son “placeholder” visual tipo tu imagen,
+              pero si NO tienes esas rutas, bórralos.
+              No agregan funcionalidad si no existen.
+          */}
+          <MenuLink href="/mi-cuenta" icon={<Settings size={16} />} onPick={onPick}>
+            Mi perfil
+          </MenuLink>
+
+          <MenuLink href="/preferencias" icon={<SlidersHorizontal size={16} />} onPick={onPick}>
+            Preferencias
+          </MenuLink>
+
+          <MenuLink href="/cambiar-password" icon={<KeyRound size={16} />} onPick={onPick}>
+            Cambiar contraseña
+          </MenuLink>
+        </>
+      )}
+
+      {/* Section: Admin */}
+      {isAuthed && userRole === "ADMIN" && (
+        <>
+          <div className="pt-1" />
+          <SectionLabel>Admin</SectionLabel>
+
+          <MenuLink href="/admin/productos" icon={<Settings size={16} />} onPick={onPick}>
+            Administrar catálogo
+          </MenuLink>
+        </>
+      )}
+
+      {/* Logout */}
+      {isAuthed && (
+        <button
+          type="button"
+          onClick={onLogout}
+          className={cx(
+            "mt-1 flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3",
+            "border border-rose-200 bg-gradient-to-r from-rose-500/12 to-white/60",
+            "text-rose-800 font-extrabold",
+            "hover:shadow-[0_0_24px_rgba(244,63,94,.22)] active:scale-[0.99]"
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <LogOut size={16} />
+            Cerrar sesión
+          </span>
+          <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-white/70 border border-white/60">
+            Salir
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-1 pt-1 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+      {children}
     </div>
   )
 }
@@ -422,12 +587,21 @@ function MenuLink({
       href={href}
       onClick={onPick}
       className={cx(
-        "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900",
-        "hover:bg-sky-500/10 hover:shadow-[0_0_18px_rgba(56,189,248,.35)]"
+        "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3",
+        "border border-white/55 bg-white/60 backdrop-blur",
+        "shadow-[0_12px_38px_-30px_rgba(2,6,23,.45)]",
+        "hover:bg-sky-500/10 hover:shadow-[0_0_22px_rgba(56,189,248,.22)]",
+        "active:scale-[0.99]"
       )}
     >
-      <span className="text-slate-700">{icon}</span>
-      {children}
+      <span className="flex items-center gap-2">
+        <span className="text-slate-700">{icon}</span>
+        <span className="text-sm font-extrabold text-slate-900">{children}</span>
+      </span>
+
+      <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-white/70 border border-white/60 text-slate-700">
+        Ir
+      </span>
     </Link>
   )
 }

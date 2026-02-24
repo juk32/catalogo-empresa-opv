@@ -1,7 +1,13 @@
 "use client"
 
-import { SessionProvider } from "next-auth/react"
+import { usePathname } from "next/navigation"
+import SiteHeader from "@/components/SiteHeader"
 
-export default function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>
+export default function HeaderGate() {
+  const pathname = usePathname()
+
+  // Oculta header en login (sin reestructurar carpetas)
+  if (pathname === "/login") return null
+
+  return <SiteHeader />
 }
