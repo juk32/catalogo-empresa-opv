@@ -1,5 +1,4 @@
-// app/api/orders/[id]/deliver/route.ts
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 
@@ -11,13 +10,15 @@ type Body = {
   deliveredPlace: string
 }
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+type Ctx = { params: Promise<{ id: string }> }
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const byUser = session.user.email ?? session.user.name ?? "ADMIN"
 
-  const raw = ctx.params.id
+  const { id: raw } = await params
   if (!raw) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   const body = (await req.json().catch(() => null)) as Body | null
@@ -46,7 +47,9 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
       for (const it of order.items) {
         const p = await tx.product.findUnique({ where: { id: it.productId } })
         if (!p) throw new Error(`Producto no encontrado: ${it.productId}`)
-        if (p.stock < it.qty) throw new Error(`Stock insuficiente: ${p.name} (stock ${p.stock}, requiere ${it.qty})`)
+        if (p.stock < it.qty) {
+          throw new Error(`Stock insuficiente: ${p.name} (stock ${p.stock}, requiere ${it.qty})`)
+        }
       }
 
       for (const it of order.items) {

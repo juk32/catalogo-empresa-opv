@@ -1,5 +1,4 @@
-// app/api/orders/[id]/pdf/route.ts
-import { NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { renderToBuffer } from "@react-pdf/renderer"
@@ -9,13 +8,25 @@ import PedidoPDF, { type PedidoPDFData } from "@/lib/pdf/PedidoPDF"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
-  const id = ctx.params.id
-  if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
+type Ctx = { params: Promise<{ id: string }> }
+
+export async function GET(_req: NextRequest, { params }: Ctx) {
+  const { id } = await params
+  if (!id) {
+    return new Response(JSON.stringify({ error: "Falta id" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 
   // (opcional) proteger PDF
   const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  if (!session?.user) {
+    return new Response(JSON.stringify({ error: "No autenticado" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 
   const order = await prisma.order.findUnique({
     where: { id },
@@ -23,21 +34,22 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
   })
 
   if (!order || order.deletedAt) {
-    return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 })
+    return new Response(JSON.stringify({ error: "Pedido no encontrado" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 
-  // ✅ URL del QR (Vercel)
+  // ✅ URL final para QR (Vercel)
   const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   const qrUrl = `${base}/qr/pedido/${order.id}`
 
-  // ✅ OJO: agregamos qrUrl al data (requiere actualizar PedidoPDFData)
   const data: PedidoPDFData = {
     folio: order.folio,
     fecha: order.createdAt.toISOString().slice(0, 10),
     solicitadoPor: order.customerName,
     vendedor: order.createdBy,
-  
-    qrUrl,
+    qrUrl, // ✅ ya lo agregaste al type
     items: order.items.map((it) => ({
       clave: it.productId,
       descripcion: it.name,
