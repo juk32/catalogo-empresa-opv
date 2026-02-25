@@ -1,5 +1,5 @@
 import React from "react"
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
+import { Document, Page, Text, View, StyleSheet, Link } from "@react-pdf/renderer"
 
 type Item = {
   clave: string
@@ -14,6 +14,7 @@ export type PedidoPDFData = {
   fecha: string
   solicitadoPor: string
   vendedor: string
+  qrUrl?: string // ✅ NUEVO
   items: Item[]
 }
 
@@ -51,6 +52,11 @@ const styles = StyleSheet.create({
   totalsBox: { width: 220, borderWidth: 1, borderColor: "#999" },
   totalsRow: { flexDirection: "row", justifyContent: "space-between", padding: 8, borderBottomWidth: 1, borderColor: "#DDD" },
   totalsRowLast: { flexDirection: "row", justifyContent: "space-between", padding: 8 },
+
+  // ✅ QR link styles
+  qrLabel: { marginTop: 8, fontSize: 9, fontWeight: 700 },
+  qrLink: { marginTop: 2, fontSize: 8.5, color: "#2563eb", textDecoration: "underline" },
+  qrHint: { marginTop: 2, fontSize: 7.5, color: "#334155" },
 })
 
 export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
@@ -78,6 +84,17 @@ export default function PedidoPDF({ data }: { data: PedidoPDFData }) {
             <Text>FOLIO: {String(data?.folio ?? "")}</Text>
             <Text>FECHA: {String(data?.fecha ?? "")}</Text>
             <Text>MONEDA: MXN</Text>
+
+            {/* ✅ QR link */}
+            {data?.qrUrl ? (
+              <>
+                <Text style={styles.qrLabel}>ABRIR PEDIDO (QR)</Text>
+                <Link src={data.qrUrl} style={styles.qrLink}>
+                  {data.qrUrl}
+                </Link>
+                <Text style={styles.qrHint}>Escanea este QR para ir al pedido en el sistema.</Text>
+              </>
+            ) : null}
           </View>
         </View>
 

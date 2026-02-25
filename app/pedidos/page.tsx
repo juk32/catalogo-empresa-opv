@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 type OrderRow = {
   id: string
@@ -52,6 +52,9 @@ type ToastState = { open: boolean; type: ToastType; title: string; message?: str
 
 export default function PedidosPage() {
   const router = useRouter()
+  const sp = useSearchParams()
+  const deliverId = sp.get("deliver") // ✅ viene del QR landing
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>([])
@@ -183,6 +186,27 @@ export default function PedidosPage() {
     }
   }
 
+  // ✅ PASO 4: si viene ?deliver=ID, abrir modal automáticamente y limpiar URL
+  useEffect(() => {
+    if (!deliverId) return
+    if (loading) return
+    if (!orders?.length) return
+
+    const found = orders.find((o) => o.id === deliverId || o.folio === deliverId)
+
+    if (found) {
+      openDeliver(found)
+    } else {
+      showToast(
+        { type: "error", title: "Pedido no encontrado", message: "No aparece en tu lista (o no tienes permisos)." },
+        3200
+      )
+    }
+
+    router.replace("/pedidos")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliverId, loading, orders])
+
   const Toast = () => {
     if (!toast.open) return null
     const meta =
@@ -280,9 +304,7 @@ export default function PedidosPage() {
               </div>
 
               {deliverErr && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                  {deliverErr}
-                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{deliverErr}</div>
               )}
 
               <button

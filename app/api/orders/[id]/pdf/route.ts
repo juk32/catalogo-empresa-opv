@@ -1,3 +1,4 @@
+// app/api/orders/[id]/pdf/route.ts
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
@@ -6,12 +7,10 @@ import React from "react"
 import PedidoPDF, { type PedidoPDFData } from "@/lib/pdf/PedidoPDF"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> } // 👈 OJO: Promise
-) {
-  const { id } = await params // 👈 OJO: await
+export async function GET(_req: Request, ctx: { params: { id: string } }) {
+  const id = ctx.params.id
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   // (opcional) proteger PDF
@@ -27,11 +26,18 @@ export async function GET(
     return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 })
   }
 
+  // ✅ URL del QR (Vercel)
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const qrUrl = `${base}/qr/pedido/${order.id}`
+
+  // ✅ OJO: agregamos qrUrl al data (requiere actualizar PedidoPDFData)
   const data: PedidoPDFData = {
     folio: order.folio,
-    fecha: order.createdAt.toISOString().slice(0, 10), // yyyy-mm-dd
+    fecha: order.createdAt.toISOString().slice(0, 10),
     solicitadoPor: order.customerName,
     vendedor: order.createdBy,
+  
+    qrUrl,
     items: order.items.map((it) => ({
       clave: it.productId,
       descripcion: it.name,
@@ -41,17 +47,14 @@ export async function GET(
     })),
   }
 
-  // Tipado de react-pdf suele pelear: casteo simple y estable
-  const pdfBuffer = await renderToBuffer(
-    React.createElement(PedidoPDF as any, { data }) as any
-  )
-
+  const pdfBuffer = await renderToBuffer(React.createElement(PedidoPDF as any, { data }) as any)
   const bytes = new Uint8Array(pdfBuffer)
 
   return new Response(bytes, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${order.folio}.pdf"`,
+      "Cache-Control": "no-store",
     },
   })
 }

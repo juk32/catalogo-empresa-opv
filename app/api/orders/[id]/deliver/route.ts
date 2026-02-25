@@ -1,25 +1,23 @@
+// app/api/orders/[id]/deliver/route.ts
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 type Body = {
   deliveredAt: string
   deliveredPlace: string
 }
 
-// ✅ Next: params puede venir como Promise
-type Ctx = { params: Promise<{ id: string }> }
-
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, ctx: { params: { id: string } }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const byUser = session.user.email ?? session.user.name ?? "ADMIN"
 
-  // ✅ ESTE es el fix
-  const { id: raw } = await params
+  const raw = ctx.params.id
   if (!raw) return NextResponse.json({ error: "Falta id" }, { status: 400 })
 
   const body = (await req.json().catch(() => null)) as Body | null
