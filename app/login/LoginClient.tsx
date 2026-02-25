@@ -1,12 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { signIn, useSession } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { ShoppingCart, User, Lock } from "lucide-react"
 
 function cx(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ")
+}
+
+function safeCallbackUrl(raw: string | null) {
+  if (!raw) return "/productos"
+  if (raw.startsWith("/")) return raw
+  return "/productos"
 }
 
 export default function LoginClient() {
@@ -15,18 +21,16 @@ export default function LoginClient() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const router = useRouter()
   const params = useSearchParams()
-  const callbackUrl = params.get("callbackUrl") || "/productos"
+  const callbackUrl = useMemo(() => safeCallbackUrl(params.get("callbackUrl")), [params])
 
   const { status } = useSession()
 
   useEffect(() => {
     if (status === "authenticated") {
-      // si ya hay sesión, fuera de /login
-      window.location.assign("/productos")
+      window.location.assign(callbackUrl) // ✅ respeta retorno
     }
-  }, [status])
+  }, [status, callbackUrl])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,13 +51,11 @@ export default function LoginClient() {
       return
     }
 
-    // ✅ Redirect fuerte: evita “doble click” y estados raros
     window.location.assign(res.url || callbackUrl)
   }
 
   return (
     <div className="relative w-full min-h-[calc(100vh-180px)] flex items-center justify-center">
-      {/* Fondo azul por encima del fondo global */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-[#1f4bd6]" />
         <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-white/10 blur-[70px]" />
@@ -97,6 +99,7 @@ export default function LoginClient() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
+                    disabled={loading || status === "loading"}
                   />
                 </div>
               </label>
@@ -118,6 +121,7 @@ export default function LoginClient() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
+                    disabled={loading || status === "loading"}
                   />
                 </div>
               </label>
@@ -129,7 +133,7 @@ export default function LoginClient() {
               )}
 
               <button
-                disabled={loading}
+                disabled={loading || status === "loading"}
                 className={cx(
                   "mt-2 h-11 w-full rounded-xl font-bold tracking-wide",
                   "bg-white text-[#1f4bd6] shadow-[0_22px_55px_-35px_rgba(0,0,0,.75)]",

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 type OrderRow = {
   id: string
@@ -52,6 +52,8 @@ type ToastState = { open: boolean; type: ToastType; title: string; message?: str
 
 export default function PedidosPage() {
   const router = useRouter()
+  const params = useSearchParams()
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>([])
@@ -64,6 +66,9 @@ export default function PedidosPage() {
   const [deliveredPlace, setDeliveredPlace] = useState("")
   const [delivering, setDelivering] = useState(false)
   const [deliverErr, setDeliverErr] = useState<string | null>(null)
+
+  // ✅ auto-open por query (?deliver=ID) solo 1 vez
+  const [autoDeliverDone, setAutoDeliverDone] = useState(false)
 
   // ✅ Toast
   const [toast, setToast] = useState<ToastState>({
@@ -88,7 +93,9 @@ export default function PedidosPage() {
       const res = await fetch("/api/orders", { cache: "no-store" })
 
       if (res.status === 401) {
-        const callbackUrl = encodeURIComponent("/pedidos")
+        // ✅ conserva deliver si venía por QR
+        const deliverId = params.get("deliver")
+        const callbackUrl = encodeURIComponent(deliverId ? `/pedidos?deliver=${deliverId}` : "/pedidos")
         router.push(`/login?callbackUrl=${callbackUrl}`)
         return
       }
@@ -119,7 +126,6 @@ export default function PedidosPage() {
   }, [orders, q])
 
   function openDeliver(o: OrderRow) {
-    // ✅ Blindaje: si no viene id, no dejamos continuar
     if (!o?.id) {
       showToast(
         { type: "error", title: "Pedido sin id", message: "Tu /api/orders no está regresando el campo id." },
@@ -134,6 +140,40 @@ export default function PedidosPage() {
     setDeliveredPlace("")
     setDeliverOpen(true)
   }
+
+  // ✅ AUTO-OPEN modal si llega ?deliver=ID (desde QR)
+  useEffect(() => {
+    const deliverId = params.get("deliver")
+    if (!deliverId) return
+    if (autoDeliverDone) return
+    if (loading) return
+    if (!orders.length) {
+      // si ya cargó y no hay pedidos, marcamos como done para no reintentar infinito
+      setAutoDeliverDone(true)
+      return
+    }
+
+    const found = orders.find((o) => String(o.id) === String(deliverId))
+    if (found) {
+      setAutoDeliverDone(true)
+      openDeliver(found)
+
+      // ✅ limpia la URL para que no se reabra al recargar
+      router.replace("/pedidos")
+    } else {
+      setAutoDeliverDone(true)
+      showToast(
+        {
+          type: "error",
+          title: "Pedido no encontrado",
+          message: "El ID del QR no existe en tu lista de pedidos.",
+        },
+        3200
+      )
+      router.replace("/pedidos")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, orders, loading, autoDeliverDone])
 
   async function confirmDeliver() {
     setDeliverErr(null)
@@ -389,7 +429,12 @@ export default function PedidosPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className={cn("shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold", s.pill)}>
+                      <div
+                        className={cn(
+                          "shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold",
+                          s.pill
+                        )}
+                      >
                         <span className={cn("h-2 w-2 rounded-full", s.dot)} />
                         {s.label}
                       </div>
