@@ -17,11 +17,11 @@ function clampQty(n: number) {
   return Math.max(1, Math.min(999, v))
 }
 
-export default function ProductActions({
+export default function CartActions({
   product,
   hideGenerate = false,
   generateHref = "/generar-pedido",
-  quickOrder = false, // si true: Ordenar también te manda a /generar-pedido
+  quickOrder = false,
 }: {
   product: ProductForAction
   hideGenerate?: boolean
@@ -53,15 +53,8 @@ export default function ProductActions({
       return false
     }
 
-    // ✅ USA TU CARRITO REAL (cart_v1)
-    addToCart(
-      { id: product.id, name: product.name, price: Number(product.price || 0) },
-      clampQty(qty)
-    )
-
-    // ✅ evento para que el navbar/carrito refresque si lo escuchas
+    addToCart({ id: product.id, name: product.name, price: Number(product.price || 0) }, clampQty(qty))
     window.dispatchEvent(new Event("cart_v1_updated"))
-
     showToast("Agregado al carrito ✅", "ok")
     return true
   }
@@ -82,7 +75,7 @@ export default function ProductActions({
 
   return (
     <div className="space-y-3">
-      {/* Toast glass bonito */}
+      {/* Toast */}
       <div
         className={`pointer-events-none fixed left-1/2 top-5 z-[9999] -translate-x-1/2 transition-all duration-200
         ${toast.show ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}

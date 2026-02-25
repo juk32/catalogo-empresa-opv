@@ -1,13 +1,14 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import ProductActions from "./ProductActions"
+import CartActions from "./CartActions"
 import ZoomImage from "./ZoomImage"
 import RelatedCarouselClient from "./RelatedCarouselClient"
+import QrInlineActions from "./QrInLineActionsClient"
 
 export const runtime = "nodejs"
 
 function formatMoney(n: number) {
-  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return (Number(n) || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -49,7 +50,8 @@ export default async function ProductoDetallePage({ params }: Ctx) {
 
   const details = Array.isArray(product.details) ? product.details : []
   const stars = clampStars(product.rating || 0)
-  const inStock = (product.stock ?? 0) > 0
+  const stockNum = Number(product.stock ?? 0)
+  const inStock = stockNum > 0
 
   // Relacionados: misma familia
   const related =
@@ -101,9 +103,7 @@ export default async function ProductoDetallePage({ params }: Ctx) {
             <h1 className="mt-0.5 truncate text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
               {product.name}
             </h1>
-            <p className="mt-0.5 text-sm text-slate-700 line-clamp-1">
-              {product.description || "Sin descripción."}
-            </p>
+            <p className="mt-0.5 text-sm text-slate-700 line-clamp-1">{product.description || "Sin descripción."}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -115,7 +115,7 @@ export default async function ProductoDetallePage({ params }: Ctx) {
                   : "border-slate-200/70 bg-white/70 text-slate-700",
               ].join(" ")}
             >
-              {inStock ? `Stock (${product.stock})` : "Sin stock"}
+              {inStock ? `Stock (${stockNum})` : "Sin stock"}
             </span>
 
             <span className="rounded-full border border-white/55 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-800 backdrop-blur">
@@ -147,9 +147,6 @@ export default async function ProductoDetallePage({ params }: Ctx) {
       <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         {/* Imagen */}
         <div className="relative overflow-hidden rounded-3xl border border-white/55 bg-white/55 p-4 shadow-[0_28px_80px_-60px_rgba(15,23,42,.6)] backdrop-blur-xl">
-          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-400/16 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-rose-400/12 blur-3xl" />
-
           <div className="relative flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-xs text-slate-700">Vista</div>
@@ -168,7 +165,7 @@ export default async function ProductoDetallePage({ params }: Ctx) {
           <div className="relative mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div className="rounded-2xl border border-white/55 bg-white/70 p-3 backdrop-blur">
               <div className="text-[11px] text-slate-600">Stock</div>
-              <div className="mt-0.5 text-sm font-semibold text-slate-900">{product.stock ?? 0}</div>
+              <div className="mt-0.5 text-sm font-semibold text-slate-900">{stockNum}</div>
             </div>
             <div className="rounded-2xl border border-white/55 bg-white/70 p-3 backdrop-blur">
               <div className="text-[11px] text-slate-600">Categoría</div>
@@ -220,32 +217,29 @@ export default async function ProductoDetallePage({ params }: Ctx) {
                   </span>
                 </div>
 
+                {/* ✅ QR / Compartir / Editar */}
+                <div className="mt-3">
+                  <QrInlineActions productId={product.id} productName={product.name} />
+                </div>
+
+                {/* ✅ Acciones carrito */}
                 <div className="mt-4">
-                  <ProductActions
+                  <CartActions
                     product={{
                       id: product.id,
                       name: product.name,
                       price: product.price,
-                      image: product.image,
-                      category: product.category,
-                      stock: product.stock,
+                      image: product.image ?? null,
+                      category: product.category ?? "",
+                      stock: product.stock ?? null,
                     }}
                   />
-                </div>
-
-                <div className="mt-4 grid gap-2">
-                  <div className="rounded-2xl border border-white/55 bg-white/70 p-3 text-sm text-slate-800 backdrop-blur">
-                    <span className="mr-2 text-slate-400">✓</span> Datos y stock visibles
-                  </div>
-                  <div className="rounded-2xl border border-white/55 bg-white/70 p-3 text-sm text-slate-800 backdrop-blur">
-                    <span className="mr-2 text-slate-400">✓</span> Compatible móvil/tablet
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ✅ DETALLES aquí, abajito de compra (compactos) */}
+          {/* ✅ DETALLES abajo */}
           <div className="relative overflow-hidden rounded-3xl border border-white/55 bg-white/55 p-4 shadow-[0_24px_70px_-55px_rgba(15,23,42,.55)] backdrop-blur-xl">
             <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-rose-400/8 blur-3xl" />
@@ -282,7 +276,7 @@ export default async function ProductoDetallePage({ params }: Ctx) {
         </div>
       </div>
 
-      {/* ✅ Carrusel (ahora se aprecia antes) */}
+      {/* Carrusel relacionados */}
       {related.length ? <RelatedCarouselClient title={`Productos de ${product.category}`} items={related} /> : null}
     </section>
   )
