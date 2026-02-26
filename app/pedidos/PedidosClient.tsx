@@ -65,7 +65,7 @@ export default function PedidosClient() {
   const [deliverPlace, setDeliverPlace] = useState("")
   const [deliverSaving, setDeliverSaving] = useState(false)
 
-  // evita reabrir muchas veces
+  // evita loops / reabrir
   const openedOnceRef = useRef<string | null>(null)
 
   async function fetchOrders() {
@@ -84,6 +84,7 @@ export default function PedidosClient() {
     }
   }
 
+  // ✅ carga inicial
   useEffect(() => {
     fetchOrders()
   }, [])
@@ -102,25 +103,64 @@ export default function PedidosClient() {
     setDeliverPlace("")
   }
 
-  // ✅ Auto modal por ?deliver=ID
-  useEffect(() => {
-    const id = sp.get("deliver")
-    if (!id) return
-    if (!orders.length) return
+  // ✅ helper: trae pedido por id (tu endpoint devuelve el order directo)
+  async function fetchOrderById(id: string): Promise<OrderRow | null> {
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, { cache: "no-store" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) return null
+      return (data as OrderRow) ?? null
+    } catch {
+      return null
+    }
+  }
 
+  /**
+   * ✅ AUTO ABRIR MODAL POR ?deliver=ID (estable)
+   * - No depende de que el pedido esté en la lista
+   * - Evita loops con openedOnceRef
+   * - Limpia el query sin “brincos”
+   */
+  useEffect(() => {
+    const idRaw = sp.get("deliver")
+    const id = (idRaw ?? "").trim()
+    if (!id) return
+
+    // evita reabrir si ya lo procesamos
     if (openedOnceRef.current === id) return
     openedOnceRef.current = id
 
-    const found = orders.find((o) => o.id === id)
-    if (!found) return
+    let cancelled = false
 
-    openDeliver(found)
+    async function run() {
+      // 1) intenta con lo ya cargado
+      const found = orders.find((o) => o.id === id)
+      if (found) {
+        openDeliver(found)
+      } else {
+        // 2) fallback: pedirlo al server
+        const order = await fetchOrderById(id)
+        if (cancelled || !order) return
 
-    // opcional: limpiar query
-    const url = new URL(window.location.href)
-    url.searchParams.delete("deliver")
-    router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
-  }, [orders, sp, router])
+        // opcional: NO lo metas a la lista (para que “no se mueva” el orden visual)
+        // si sí lo quieres mostrar arriba, descomenta:
+        // setOrders((prev) => (prev.some((x) => x.id === order.id) ? prev : [order, ...prev]))
+
+        openDeliver(order)
+      }
+
+      // 3) limpiar deliver del URL para que no se reabra en refresh
+      const url = new URL(window.location.href)
+      url.searchParams.delete("deliver")
+      router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+    }
+
+    run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [sp, orders, router]) // ✅ dependemos de orders para el "found"; si no, fallback API igual abre
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()

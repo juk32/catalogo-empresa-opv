@@ -36,7 +36,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 type PatchBody = {
   customerName?: string
   deliveryAt?: string | null
-  // 🚫 No aceptamos edición de items aquí
+  //  No aceptamos edición de items aquí
   // items?: ...
 }
 
