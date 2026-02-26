@@ -21,10 +21,9 @@ export default async function Page({ searchParams }: Ctx) {
     redirect(`/login?callbackUrl=${encodeURIComponent(cb)}`)
   }
 
-  // ✅ ya logueado -> client se encarga del modal si viene deliver
   return (
     <Suspense fallback={<div className="p-6 text-slate-600">Cargando pedidos…</div>}>
-      <PedidosClient />
+      <PedidosClient initialDeliver={deliver} />
     </Suspense>
   )
 }

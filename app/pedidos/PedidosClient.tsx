@@ -49,7 +49,7 @@ function toLocalDatetime(iso: string) {
   )}`
 }
 
-export default function PedidosClient() {
+export default function PedidosClient({ initialDeliver }: { initialDeliver?: string }) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -116,19 +116,18 @@ export default function PedidosClient() {
   }
 
   /**
-   * ✅ AUTO ABRIR MODAL POR ?deliver=ID (estable)
-   * - No depende de que el pedido esté en la lista
+   * ✅ AUTO ABRIR MODAL POR deliver
+   * - Funciona aunque el query se pierda en móvil (usa initialDeliver)
+   * - Si no está en la lista, hace fetch al server
    * - Evita loops con openedOnceRef
-   * - Limpia el query sin “brincos”
+   * - Limpia el query solo si venía en URL
    */
   useEffect(() => {
-    const idRaw = sp.get("deliver")
-    const id = (idRaw ?? "").trim()
+    const idFromQuery = sp.get("deliver")
+    const id = ((idFromQuery ?? initialDeliver) ?? "").trim()
     if (!id) return
 
-    // evita reabrir si ya lo procesamos
     if (openedOnceRef.current === id) return
-    openedOnceRef.current = id
 
     let cancelled = false
 
@@ -136,23 +135,26 @@ export default function PedidosClient() {
       // 1) intenta con lo ya cargado
       const found = orders.find((o) => o.id === id)
       if (found) {
+        openedOnceRef.current = id
         openDeliver(found)
       } else {
         // 2) fallback: pedirlo al server
         const order = await fetchOrderById(id)
         if (cancelled || !order) return
 
+        openedOnceRef.current = id
         // opcional: NO lo metas a la lista (para que “no se mueva” el orden visual)
-        // si sí lo quieres mostrar arriba, descomenta:
         // setOrders((prev) => (prev.some((x) => x.id === order.id) ? prev : [order, ...prev]))
 
         openDeliver(order)
       }
 
-      // 3) limpiar deliver del URL para que no se reabra en refresh
-      const url = new URL(window.location.href)
-      url.searchParams.delete("deliver")
-      router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+      // 3) limpiar deliver del URL para que no se reabra en refresh (solo si venía en query)
+      if (idFromQuery) {
+        const url = new URL(window.location.href)
+        url.searchParams.delete("deliver")
+        router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+      }
     }
 
     run()
@@ -160,7 +162,7 @@ export default function PedidosClient() {
     return () => {
       cancelled = true
     }
-  }, [sp, orders, router]) // ✅ dependemos de orders para el "found"; si no, fallback API igual abre
+  }, [sp, initialDeliver, orders, router])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
