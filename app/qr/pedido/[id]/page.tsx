@@ -1,3 +1,5 @@
+// app/qr/pedido/[id]/page.tsx
+
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 
@@ -9,13 +11,17 @@ export default async function Page({ params }: Ctx) {
   const { id: raw } = await params
   const id = decodeURIComponent(raw)
 
+  if (!id) {
+    redirect("/pedidos")
+  }
+
   const session = await auth()
 
-  // ✅ si NO hay sesión -> login y regresa aquí
-  if (!session) {
+  // 🔐 Si NO está logueado → login
+  if (!session?.user) {
     redirect(`/login?callbackUrl=${encodeURIComponent(`/qr/pedido/${id}`)}`)
   }
 
-  // ✅ si hay sesión -> abrir pedidos con modal de entrega
+  // ✅ Si está logueado → abrir modal
   redirect(`/pedidos?deliver=${encodeURIComponent(id)}`)
 }
