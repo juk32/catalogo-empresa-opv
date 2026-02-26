@@ -1,16 +1,16 @@
 // app/pedidos/[id]/pdf/route.ts
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 // ✅ Fuerza Node (PDF libs usualmente requieren Node APIs)
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// Si usas alguna lib tipo pdfkit, aquí iría.
-// Ejemplo: import PDFDocument from "pdfkit"
+type Ctx = { params: Promise<{ id: string }> }
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
-    const id = ctx.params.id
+    const { id: raw } = await ctx.params
+    const id = decodeURIComponent(raw)
 
     if (!id) {
       return NextResponse.json({ error: "Falta id" }, { status: 400 })
@@ -19,8 +19,6 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
     // =========================
     // AQUÍ GENERAS TU PDF
     // =========================
-    // ✅ Placeholder: por ahora regresamos un PDF mínimo válido (1 página vacía)
-    // Reemplaza esto por tu generación real (pdfkit / react-pdf / etc.)
     const pdfBytes = minimalPdfBytes(`Pedido ${id}`)
 
     return new NextResponse(pdfBytes, {
@@ -43,7 +41,6 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
  * Sustituye por tu lógica real de PDF.
  */
 function minimalPdfBytes(title: string) {
-  // PDF súper básico (no perfecto para producción, pero válido y abre)
   const content = `%PDF-1.4
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
 2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
