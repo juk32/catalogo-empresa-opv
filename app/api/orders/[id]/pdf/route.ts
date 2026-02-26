@@ -47,9 +47,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     })
   }
 
-  // ✅ URL final para QR (Vercel)
-  const base = normalizeBase(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")
-  const qrUrl = `${base}/qr/pedido/${encodeURIComponent(order.id)}`
+// ✅ URL final para QR (Vercel)
+const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "")
+const qrUrl = `${base}/pedidos?deliver=${encodeURIComponent(order.id)}`
+
 
   const data: PedidoPDFData = {
     folio: order.folio,

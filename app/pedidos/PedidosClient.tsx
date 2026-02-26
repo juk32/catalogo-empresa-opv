@@ -40,6 +40,15 @@ function statusPill(status: OrderStatus) {
     : "bg-amber-500/10 text-amber-900 border-amber-200"
 }
 
+function toLocalDatetime(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`
+}
+
 export default function PedidosClient() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -47,7 +56,6 @@ export default function PedidosClient() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
-
   const [q, setQ] = useState("")
 
   // modal entrega
@@ -57,6 +65,7 @@ export default function PedidosClient() {
   const [deliverPlace, setDeliverPlace] = useState("")
   const [deliverSaving, setDeliverSaving] = useState(false)
 
+  // evita reabrir muchas veces
   const openedOnceRef = useRef<string | null>(null)
 
   async function fetchOrders() {
@@ -64,13 +73,8 @@ export default function PedidosClient() {
     setErr(null)
     try {
       const res = await fetch("/api/orders", { cache: "no-store" })
-      if (res.status === 401) {
-        router.push(`/login?callbackUrl=${encodeURIComponent("/pedidos")}`)
-        return
-      }
       const data = await res.json().catch(() => null)
 
-      // soporta array o { orders: [] }
       const list = (Array.isArray(data) ? data : data?.orders) as OrderRow[] | undefined
       setOrders(list ?? [])
     } catch (e: any) {
@@ -82,12 +86,10 @@ export default function PedidosClient() {
 
   useEffect(() => {
     fetchOrders()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function openDeliver(order: OrderRow) {
     setDeliverOrder(order)
-    // valores default
     setDeliverAt(order.deliveredAt ? toLocalDatetime(order.deliveredAt) : "")
     setDeliverPlace(order.deliveredPlace ?? "")
     setDeliverOpen(true)
@@ -100,13 +102,12 @@ export default function PedidosClient() {
     setDeliverPlace("")
   }
 
-  // ✅ Auto-open por ?deliver=ID (cuando ya cargó la lista)
+  // ✅ Auto modal por ?deliver=ID
   useEffect(() => {
     const id = sp.get("deliver")
     if (!id) return
     if (!orders.length) return
 
-    // evita reabrir infinitamente
     if (openedOnceRef.current === id) return
     openedOnceRef.current = id
 
@@ -115,25 +116,20 @@ export default function PedidosClient() {
 
     openDeliver(found)
 
-    // ✅ opcional: limpia query para que no se reabra al refresh
+    // opcional: limpiar query
     const url = new URL(window.location.href)
     url.searchParams.delete("deliver")
     router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, sp])
+  }, [orders, sp, router])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
     if (!s) return orders
-    return orders.filter((o) => {
-      const hay = `${o.folio} ${o.customerName} ${o.status}`.toLowerCase()
-      return hay.includes(s)
-    })
+    return orders.filter((o) => `${o.folio} ${o.customerName} ${o.status}`.toLowerCase().includes(s))
   }, [orders, q])
 
   async function confirmDeliver() {
     if (!deliverOrder) return
-
     setDeliverSaving(true)
     setErr(null)
 
@@ -149,15 +145,9 @@ export default function PedidosClient() {
         body: JSON.stringify(body),
       })
 
-      if (res.status === 401) {
-        router.push(`/login?callbackUrl=${encodeURIComponent("/pedidos")}`)
-        return
-      }
-
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error((data as any)?.error || "No se pudo confirmar entrega")
 
-      // recarga lista para ver status actualizado
       await fetchOrders()
       closeDeliver()
     } catch (e: any) {
@@ -169,22 +159,19 @@ export default function PedidosClient() {
 
   return (
     <section className="relative space-y-5 sm:space-y-7">
-      {/* fondo neon clear */}
+      {/* fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-[-120px] h-[320px] w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-indigo-300/25 to-fuchsia-300/35 blur-3xl" />
         <div className="absolute right-[-140px] top-[35%] h-[280px] w-[280px] rounded-full bg-gradient-to-br from-emerald-300/18 to-sky-300/18 blur-3xl" />
         <div className="absolute left-[-140px] top-[60%] h-[280px] w-[280px] rounded-full bg-gradient-to-br from-amber-300/16 to-rose-300/16 blur-3xl" />
       </div>
 
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
             Historial de pedidos
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Consulta pedidos recientes y entra al detalle.
-          </p>
+          <p className="mt-1 text-sm text-slate-600">Consulta pedidos recientes y entra al detalle.</p>
         </div>
 
         <div className="flex gap-2">
@@ -212,7 +199,6 @@ export default function PedidosClient() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)] p-4 sm:p-5">
         <input
           value={q}
@@ -226,13 +212,8 @@ export default function PedidosClient() {
         />
       </div>
 
-      {err && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-          {err}
-        </div>
-      )}
+      {err && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{err}</div>}
 
-      {/* List */}
       <div className="grid gap-3">
         {loading ? (
           <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow p-6 text-slate-600">
@@ -258,7 +239,7 @@ export default function PedidosClient() {
                   </div>
                   <div className="mt-1 text-slate-900 font-semibold">{o.customerName}</div>
                   <div className="mt-1 text-xs text-slate-600">
-                    Creado: {fmtDate(o.createdAt)} &nbsp;•&nbsp; Entrega: {fmtDate(o.deliveryAt)}
+                    Creado: {fmtDate(o.createdAt)} • Entrega: {fmtDate(o.deliveryAt)}
                   </div>
                 </div>
 
@@ -291,13 +272,11 @@ export default function PedidosClient() {
         )}
       </div>
 
-      {/* Modal Entrega */}
+      {/* Modal */}
       {deliverOpen && deliverOrder ? (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px]"
-            onClick={closeDeliver}
-          />
+          <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px]" onClick={closeDeliver} />
+
           <div className="relative w-[92vw] max-w-2xl rounded-3xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_60px_rgba(2,6,23,0.25)]">
             <div className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
@@ -336,9 +315,7 @@ export default function PedidosClient() {
                       "outline-none focus:ring-2 focus:ring-cyan-300/50"
                     )}
                   />
-                  <div className="mt-1 text-xs text-slate-600">
-                    Si lo dejas vacío, se toma la hora actual.
-                  </div>
+                  <div className="mt-1 text-xs text-slate-600">Si lo dejas vacío, se toma la hora actual.</div>
                 </div>
 
                 <div>
@@ -374,16 +351,4 @@ export default function PedidosClient() {
       ) : null}
     </section>
   )
-}
-
-function toLocalDatetime(iso: string) {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ""
-  const pad = (n: number) => String(n).padStart(2, "0")
-  const yyyy = d.getFullYear()
-  const mm = pad(d.getMonth() + 1)
-  const dd = pad(d.getDate())
-  const hh = pad(d.getHours())
-  const mi = pad(d.getMinutes())
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
 }
