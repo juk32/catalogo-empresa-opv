@@ -10,8 +10,15 @@ export const dynamic = "force-dynamic"
 
 type Ctx = { params: Promise<{ id: string }> }
 
+function normalizeBase(url: string) {
+  // quita slash final si existe
+  return url.replace(/\/+$/, "")
+}
+
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const { id } = await params
+  const { id: raw } = await params
+  const id = decodeURIComponent(raw || "")
+
   if (!id) {
     return new Response(JSON.stringify({ error: "Falta id" }), {
       status: 400,
@@ -41,15 +48,15 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }
 
   // ✅ URL final para QR (Vercel)
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const qrUrl = `${base}/qr/pedido/${order.id}`
+  const base = normalizeBase(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")
+  const qrUrl = `${base}/qr/pedido/${encodeURIComponent(order.id)}`
 
   const data: PedidoPDFData = {
     folio: order.folio,
     fecha: order.createdAt.toISOString().slice(0, 10),
     solicitadoPor: order.customerName,
     vendedor: order.createdBy,
-    qrUrl, // ✅ ya lo agregaste al type
+    qrUrl, // ✅ QR siempre lleva al gate /qr/pedido/[id]
     items: order.items.map((it) => ({
       clave: it.productId,
       descripcion: it.name,
@@ -59,7 +66,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     })),
   }
 
-  const pdfBuffer = await renderToBuffer(React.createElement(PedidoPDF as any, { data }) as any)
+  const pdfBuffer = await renderToBuffer(
+    React.createElement(PedidoPDF as any, { data }) as any
+  )
   const bytes = new Uint8Array(pdfBuffer)
 
   return new Response(bytes, {

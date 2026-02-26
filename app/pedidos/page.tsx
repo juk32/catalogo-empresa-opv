@@ -1,11 +1,11 @@
 import { Suspense } from "react"
 import PedidosClient from "./PedidosClient"
 
-export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
-export default function PedidosPage() {
+export default function Page() {
   return (
-    <Suspense fallback={<div className="p-6 text-slate-600">Cargando…</div>}>
+    <Suspense fallback={<div className="p-6 text-slate-600">Cargando pedidos…</div>}>
       <PedidosClient />
     </Suspense>
   )

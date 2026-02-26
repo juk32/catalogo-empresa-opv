@@ -1,16 +1,18 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+
+type OrderStatus = "PENDIENTE" | "ENTREGADO"
 
 type OrderRow = {
   id: string
   folio: string
   customerName: string
-  status: "PENDIENTE" | "ENTREGADO"
-  deliveryAt: string | null
+  status: OrderStatus
   createdAt?: string
+  deliveryAt?: string | null
   deliveredAt?: string | null
   deliveredPlace?: string | null
 }
@@ -32,420 +34,356 @@ function fmtDate(v?: string | null) {
   })
 }
 
-function statusStyles(status: OrderRow["status"]) {
-  if (status === "ENTREGADO") {
-    return {
-      label: "Entregado",
-      pill: "bg-emerald-500/12 text-emerald-800 ring-1 ring-emerald-300/40",
-      dot: "bg-emerald-500",
-    }
-  }
-  return {
-    label: "Pendiente",
-    pill: "bg-amber-500/12 text-amber-900 ring-1 ring-amber-300/40",
-    dot: "bg-amber-500",
-  }
+function statusPill(status: OrderStatus) {
+  return status === "ENTREGADO"
+    ? "bg-emerald-500/10 text-emerald-800 border-emerald-200"
+    : "bg-amber-500/10 text-amber-900 border-amber-200"
 }
-
-type ToastType = "success" | "info" | "error"
-type ToastState = { open: boolean; type: ToastType; title: string; message?: string }
 
 export default function PedidosClient() {
   const router = useRouter()
   const sp = useSearchParams()
-  const deliverId = sp.get("deliver") // ✅ viene del QR landing
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+
   const [q, setQ] = useState("")
 
-  // ✅ Modal entregar
+  // modal entrega
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [deliverOrder, setDeliverOrder] = useState<OrderRow | null>(null)
-  const [deliveredAt, setDeliveredAt] = useState("")
-  const [deliveredPlace, setDeliveredPlace] = useState("")
-  const [delivering, setDelivering] = useState(false)
-  const [deliverErr, setDeliverErr] = useState<string | null>(null)
+  const [deliverAt, setDeliverAt] = useState("") // datetime-local
+  const [deliverPlace, setDeliverPlace] = useState("")
+  const [deliverSaving, setDeliverSaving] = useState(false)
 
-  // ✅ Toast
-  const [toast, setToast] = useState<ToastState>({
-    open: false,
-    type: "info",
-    title: "",
-    message: "",
-  })
+  const openedOnceRef = useRef<string | null>(null)
 
-  function showToast(next: Omit<ToastState, "open">, ms = 2600) {
-    setToast({ open: true, ...next })
-    window.clearTimeout((showToast as any)._t)
-    ;(showToast as any)._t = window.setTimeout(() => {
-      setToast((t) => ({ ...t, open: false }))
-    }, ms)
-  }
-
-  async function load() {
-    setError(null)
+  async function fetchOrders() {
     setLoading(true)
+    setErr(null)
     try {
       const res = await fetch("/api/orders", { cache: "no-store" })
-
       if (res.status === 401) {
-        const callbackUrl = encodeURIComponent("/pedidos")
-        router.push(`/login?callbackUrl=${callbackUrl}`)
+        router.push(`/login?callbackUrl=${encodeURIComponent("/pedidos")}`)
         return
       }
+      const data = await res.json().catch(() => null)
 
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as any)?.error || "No se pudieron cargar pedidos")
-
-      setOrders(Array.isArray(data) ? (data as OrderRow[]) : [])
+      // soporta array o { orders: [] }
+      const list = (Array.isArray(data) ? data : data?.orders) as OrderRow[] | undefined
+      setOrders(list ?? [])
     } catch (e: any) {
-      setError(e?.message || "Error cargando pedidos")
+      setErr(e?.message ?? "No se pudieron cargar los pedidos")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    load()
+    fetchOrders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filtered = useMemo(() => {
-    const qq = q.trim().toLowerCase()
-    if (!qq) return orders
-    return orders.filter((o) => {
-      const blob = `${o.folio} ${o.id} ${o.customerName} ${o.status}`.toLowerCase()
-      return blob.includes(qq)
-    })
-  }, [orders, q])
-
-  function openDeliver(o: OrderRow) {
-    // ✅ Blindaje: si no viene id, no dejamos continuar
-    if (!o?.id) {
-      showToast(
-        { type: "error", title: "Pedido sin id", message: "Tu /api/orders no está regresando el campo id." },
-        3500
-      )
-      return
-    }
-
-    setDeliverErr(null)
-    setDeliverOrder(o)
-    setDeliveredAt("")
-    setDeliveredPlace("")
+  function openDeliver(order: OrderRow) {
+    setDeliverOrder(order)
+    // valores default
+    setDeliverAt(order.deliveredAt ? toLocalDatetime(order.deliveredAt) : "")
+    setDeliverPlace(order.deliveredPlace ?? "")
     setDeliverOpen(true)
   }
 
+  function closeDeliver() {
+    setDeliverOpen(false)
+    setDeliverOrder(null)
+    setDeliverAt("")
+    setDeliverPlace("")
+  }
+
+  // ✅ Auto-open por ?deliver=ID (cuando ya cargó la lista)
+  useEffect(() => {
+    const id = sp.get("deliver")
+    if (!id) return
+    if (!orders.length) return
+
+    // evita reabrir infinitamente
+    if (openedOnceRef.current === id) return
+    openedOnceRef.current = id
+
+    const found = orders.find((o) => o.id === id)
+    if (!found) return
+
+    openDeliver(found)
+
+    // ✅ opcional: limpia query para que no se reabra al refresh
+    const url = new URL(window.location.href)
+    url.searchParams.delete("deliver")
+    router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, sp])
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return orders
+    return orders.filter((o) => {
+      const hay = `${o.folio} ${o.customerName} ${o.status}`.toLowerCase()
+      return hay.includes(s)
+    })
+  }, [orders, q])
+
   async function confirmDeliver() {
-    setDeliverErr(null)
     if (!deliverOrder) return
 
-    if (!deliverOrder.id) {
-      const msg = "Este pedido no tiene id. Revisa /api/orders (GET)."
-      setDeliverErr(msg)
-      showToast({ type: "error", title: "Pedido sin id", message: msg }, 3500)
-      return
-    }
-
-    if (!deliveredAt) return setDeliverErr("Selecciona fecha y hora real de entrega.")
-    if (!deliveredPlace.trim()) return setDeliverErr("Escribe dónde se entregó.")
-
-    setDelivering(true)
-    showToast({ type: "info", title: "Guardando entrega…", message: "Actualizando status y stock." }, 2200)
+    setDeliverSaving(true)
+    setErr(null)
 
     try {
+      const body = {
+        deliveredAt: deliverAt ? new Date(deliverAt).toISOString() : new Date().toISOString(),
+        deliveredPlace: deliverPlace?.trim() || null,
+      }
+
       const res = await fetch(`/api/orders/${encodeURIComponent(deliverOrder.id)}/deliver`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deliveredAt: new Date(deliveredAt).toISOString(),
-          deliveredPlace: deliveredPlace.trim(),
-        }),
+        body: JSON.stringify(body),
       })
 
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=${encodeURIComponent("/pedidos")}`)
+        return
+      }
+
       const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error((data as any)?.error || "No se pudo marcar como entregado")
+      if (!res.ok) throw new Error((data as any)?.error || "No se pudo confirmar entrega")
 
-      setDeliverOpen(false)
-      setDeliverOrder(null)
-
-      showToast(
-        { type: "success", title: "Listo ✅", message: "Pedido marcado como ENTREGADO y stock actualizado." },
-        2600
-      )
-
-      await load()
+      // recarga lista para ver status actualizado
+      await fetchOrders()
+      closeDeliver()
     } catch (e: any) {
-      const msg = e?.message ?? "Error"
-      setDeliverErr(msg)
-      showToast({ type: "error", title: "No se pudo entregar", message: msg }, 3200)
+      setErr(e?.message ?? "Error confirmando entrega")
     } finally {
-      setDelivering(false)
+      setDeliverSaving(false)
     }
-  }
-
-  // ✅ PASO 4: si viene ?deliver=ID, abrir modal automáticamente y limpiar URL
-  useEffect(() => {
-    if (!deliverId) return
-    if (loading) return
-    if (!orders?.length) return
-
-    const found = orders.find((o) => o.id === deliverId || o.folio === deliverId)
-
-    if (found) {
-      openDeliver(found)
-    } else {
-      showToast(
-        { type: "error", title: "Pedido no encontrado", message: "No aparece en tu lista (o no tienes permisos)." },
-        3200
-      )
-    }
-
-    router.replace("/pedidos")
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deliverId, loading, orders])
-
-  const Toast = () => {
-    if (!toast.open) return null
-    const meta =
-      toast.type === "success"
-        ? { ring: "ring-emerald-300/40", bg: "bg-emerald-500/10", text: "text-emerald-800", dot: "bg-emerald-500" }
-        : toast.type === "error"
-        ? { ring: "ring-rose-300/40", bg: "bg-rose-500/10", text: "text-rose-800", dot: "bg-rose-500" }
-        : { ring: "ring-sky-300/40", bg: "bg-sky-500/10", text: "text-sky-900", dot: "bg-sky-500" }
-
-    return (
-      <div className="fixed bottom-5 right-5 z-[999] w-[92vw] max-w-sm">
-        <div
-          className={cn(
-            "rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl",
-            "shadow-[0_18px_60px_rgba(2,6,23,0.18)] ring-1",
-            meta.ring
-          )}
-        >
-          <div className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn("h-2.5 w-2.5 rounded-full", meta.dot)} />
-                  <div className={cn("text-sm font-semibold truncate", meta.text)}>{toast.title}</div>
-                </div>
-                {toast.message ? <div className="mt-1 text-xs text-slate-600">{toast.message}</div> : null}
-              </div>
-              <button
-                onClick={() => setToast((t) => ({ ...t, open: false }))}
-                className="shrink-0 rounded-xl px-2 py-1 text-xs font-semibold border border-white/70 bg-white/70 hover:bg-white transition"
-              >
-                Cerrar
-              </button>
-            </div>
-            <div className={cn("mt-3 rounded-xl px-3 py-2 text-xs", meta.bg, meta.text)}>
-              Tip: Si marca “stock insuficiente”, revisa inventario.
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const DeliverModal = () => {
-    if (!deliverOpen || !deliverOrder) return null
-    return (
-      <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/30" onClick={() => (!delivering ? setDeliverOpen(false) : null)} />
-
-        <div className="relative w-full max-w-lg rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_60px_rgba(2,6,23,0.25)]">
-          <div className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-base font-semibold text-slate-900">Confirmar entrega</div>
-                <div className="mt-1 text-xs text-slate-600">
-                  Pedido: <b>{deliverOrder.folio || deliverOrder.id}</b> • Cliente: <b>{deliverOrder.customerName}</b>
-                </div>
-                <div className="mt-1 text-xs text-slate-600">
-                  Esto cambiará el status a <b>ENTREGADO</b> y descontará stock.
-                </div>
-              </div>
-
-              <button
-                onClick={() => setDeliverOpen(false)}
-                disabled={delivering}
-                className={cn(
-                  "rounded-xl px-3 py-2 text-xs font-semibold",
-                  "border border-white/70 bg-white/70 hover:bg-white transition",
-                  delivering ? "opacity-60 cursor-not-allowed" : ""
-                )}
-              >
-                Cerrar
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-800">Hora real de entrega</label>
-                <input
-                  type="datetime-local"
-                  value={deliveredAt}
-                  onChange={(e) => setDeliveredAt(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-white/70 bg-white/70 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-cyan-300/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-800">¿Dónde se entregó?</label>
-                <input
-                  value={deliveredPlace}
-                  onChange={(e) => setDeliveredPlace(e.target.value)}
-                  placeholder="Ej. Sucursal Centro / Domicilio / Recepción"
-                  className="mt-2 w-full rounded-xl border border-white/70 bg-white/70 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-cyan-300/50"
-                />
-              </div>
-
-              {deliverErr && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{deliverErr}</div>
-              )}
-
-              <button
-                disabled={delivering}
-                onClick={confirmDeliver}
-                className={cn(
-                  "w-full rounded-xl px-4 py-3 text-sm font-semibold text-white",
-                  "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 hover:brightness-95 transition",
-                  delivering ? "opacity-60 cursor-not-allowed" : ""
-                )}
-              >
-                {delivering ? "Guardando..." : "Confirmar entrega"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
-    <section className="relative space-y-4 sm:space-y-6">
-      <Toast />
-      <DeliverModal />
-
-      {/* Neon Clear background */}
+    <section className="relative space-y-5 sm:space-y-7">
+      {/* fondo neon clear */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[-110px] h-[280px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-indigo-300/25 to-fuchsia-300/35 blur-3xl" />
-        <div className="absolute right-[-120px] top-[35%] h-[260px] w-[260px] rounded-full bg-gradient-to-br from-emerald-300/20 to-sky-300/20 blur-3xl" />
-        <div className="absolute left-[-120px] top-[60%] h-[260px] w-[260px] rounded-full bg-gradient-to-br from-amber-300/20 to-rose-300/20 blur-3xl" />
+        <div className="absolute left-1/2 top-[-120px] h-[320px] w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-indigo-300/25 to-fuchsia-300/35 blur-3xl" />
+        <div className="absolute right-[-140px] top-[35%] h-[280px] w-[280px] rounded-full bg-gradient-to-br from-emerald-300/18 to-sky-300/18 blur-3xl" />
+        <div className="absolute left-[-140px] top-[60%] h-[280px] w-[280px] rounded-full bg-gradient-to-br from-amber-300/16 to-rose-300/16 blur-3xl" />
       </div>
 
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Historial de pedidos</h1>
-          <p className="mt-1 text-sm text-slate-600">Consulta pedidos recientes y entra al detalle.</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+            Historial de pedidos
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Consulta pedidos recientes y entra al detalle.
+          </p>
         </div>
 
-        <button
-          onClick={load}
-          className={cn(
-            "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold",
-            "border border-white/70 bg-white/60 backdrop-blur-xl",
-            "shadow-[0_10px_30px_rgba(2,6,23,0.08)] hover:bg-white/75 transition"
-          )}
-        >
-          Recargar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchOrders}
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-semibold",
+              "border border-white/70 bg-white/60 backdrop-blur-xl",
+              "shadow-[0_10px_30px_rgba(2,6,23,0.08)] hover:bg-white/75 transition"
+            )}
+          >
+            Recargar
+          </button>
+
+          <Link
+            href="/generar-pedido"
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-semibold text-white",
+              "shadow-[0_18px_60px_rgba(2,6,23,0.22)]",
+              "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 hover:brightness-95 transition"
+            )}
+          >
+            Nuevo pedido
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
-      <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)]">
-        <div className="p-3 sm:p-4">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar… (folio, cliente, estatus)"
-            className={cn(
-              "w-full rounded-xl px-3 py-2.5 text-sm",
-              "border border-white/70 bg-white/70 text-slate-900 placeholder:text-slate-400",
-              "outline-none focus:ring-2 focus:ring-cyan-300/50"
-            )}
-          />
-        </div>
+      <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)] p-4 sm:p-5">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar... (folio, cliente, estatus)"
+          className={cn(
+            "w-full rounded-xl px-3 py-2.5 text-sm",
+            "border border-white/70 bg-white/70 text-slate-900 placeholder:text-slate-400",
+            "outline-none focus:ring-2 focus:ring-cyan-300/50"
+          )}
+        />
       </div>
 
-      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{error}</div>}
-
-      {loading ? (
-        <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl p-4 text-slate-600">Cargando…</div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)] p-6 text-center">
-          <div className="mx-auto mb-2 h-10 w-10 rounded-2xl bg-white/70 border border-white/70" />
-          <div className="font-semibold text-slate-900">No hay pedidos</div>
-          <div className="text-sm text-slate-600 mt-1">Cuando generes pedidos aparecerán aquí.</div>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:gap-4">
-          {filtered.map((o) => {
-            const s = statusStyles(o.status)
-            const canDeliver = o.status === "PENDIENTE" && !!o.id
-
-            return (
-              <Link
-                key={o.id || `${o.folio}-${o.customerName}`}
-                href={`/pedidos/${o.id}`}
-                className={cn(
-                  "group rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl",
-                  "shadow-[0_10px_30px_rgba(2,6,23,0.08)] hover:shadow-[0_18px_60px_rgba(2,6,23,0.12)]",
-                  "transition hover:-translate-y-[2px]"
-                )}
-              >
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm sm:text-base font-semibold text-slate-900 truncate">{o.folio || o.id}</div>
-                      <div className="mt-1 text-sm text-slate-600 truncate">{o.customerName}</div>
-
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <span>Creado: {fmtDate(o.createdAt)}</span>
-                        <span>Entrega: {fmtDate(o.deliveryAt)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className={cn("shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold", s.pill)}>
-                        <span className={cn("h-2 w-2 rounded-full", s.dot)} />
-                        {s.label}
-                      </div>
-
-                      {o.status === "PENDIENTE" && (
-                        <button
-                          disabled={!canDeliver}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            openDeliver(o)
-                          }}
-                          className={cn(
-                            "inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold",
-                            "border border-white/70 bg-white/70 hover:bg-white transition",
-                            !canDeliver ? "opacity-50 cursor-not-allowed" : ""
-                          )}
-                        >
-                          Entregar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl border border-white/70 bg-white/70 p-3 text-xs text-slate-600 flex items-center justify-between">
-                    <span className="truncate">Ver detalle del pedido</span>
-                    <span className="font-semibold text-slate-900 group-hover:underline">Abrir →</span>
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
+      {err && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+          {err}
         </div>
       )}
+
+      {/* List */}
+      <div className="grid gap-3">
+        {loading ? (
+          <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow p-6 text-slate-600">
+            Cargando…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow p-6 text-slate-600">
+            No hay pedidos.
+          </div>
+        ) : (
+          filtered.map((o) => (
+            <div
+              key={o.id}
+              className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_10px_30px_rgba(2,6,23,0.08)] hover:bg-white/70 transition"
+            >
+              <div className="p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-black text-slate-900 tracking-tight">{o.folio}</div>
+                    <span className={cn("text-xs px-2 py-1 rounded-full border", statusPill(o.status))}>
+                      {o.status}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-slate-900 font-semibold">{o.customerName}</div>
+                  <div className="mt-1 text-xs text-slate-600">
+                    Creado: {fmtDate(o.createdAt)} &nbsp;•&nbsp; Entrega: {fmtDate(o.deliveryAt)}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/api/orders/${encodeURIComponent(o.id)}/pdf`}
+                    target="_blank"
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold",
+                      "border border-white/70 bg-white/70 hover:bg-white transition"
+                    )}
+                  >
+                    Ver PDF
+                  </Link>
+
+                  <button
+                    onClick={() => openDeliver(o)}
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white",
+                      "shadow-[0_18px_60px_rgba(2,6,23,0.18)]",
+                      "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 hover:brightness-95 transition"
+                    )}
+                  >
+                    Entregar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal Entrega */}
+      {deliverOpen && deliverOrder ? (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px]"
+            onClick={closeDeliver}
+          />
+          <div className="relative w-[92vw] max-w-2xl rounded-3xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_60px_rgba(2,6,23,0.25)]">
+            <div className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-lg font-black text-slate-900">Confirmar entrega</div>
+                  <div className="mt-1 text-sm text-slate-700">
+                    Pedido: <span className="font-semibold">{deliverOrder.folio}</span> • Cliente:{" "}
+                    <span className="font-semibold">{deliverOrder.customerName}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-slate-600">
+                    Esto cambiará el status a <b>ENTREGADO</b> y descontará stock.
+                  </div>
+                </div>
+
+                <button
+                  onClick={closeDeliver}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-sm font-semibold",
+                    "border border-white/70 bg-white/70 hover:bg-white transition"
+                  )}
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800">Hora real de entrega</label>
+                  <input
+                    type="datetime-local"
+                    value={deliverAt}
+                    onChange={(e) => setDeliverAt(e.target.value)}
+                    className={cn(
+                      "mt-2 w-full rounded-xl px-3 py-2.5 text-sm",
+                      "border border-white/70 bg-white/70 text-slate-900",
+                      "outline-none focus:ring-2 focus:ring-cyan-300/50"
+                    )}
+                  />
+                  <div className="mt-1 text-xs text-slate-600">
+                    Si lo dejas vacío, se toma la hora actual.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800">¿Dónde se entregó?</label>
+                  <input
+                    value={deliverPlace}
+                    onChange={(e) => setDeliverPlace(e.target.value)}
+                    placeholder="Ej. Sucursal Centro / Domicilio / Bodega"
+                    className={cn(
+                      "mt-2 w-full rounded-xl px-3 py-2.5 text-sm",
+                      "border border-white/70 bg-white/70 text-slate-900 placeholder:text-slate-400",
+                      "outline-none focus:ring-2 focus:ring-cyan-300/50"
+                    )}
+                  />
+                </div>
+
+                <button
+                  onClick={confirmDeliver}
+                  disabled={deliverSaving}
+                  className={cn(
+                    "w-full rounded-xl px-6 py-3 text-sm font-semibold text-white",
+                    "shadow-[0_18px_60px_rgba(2,6,23,0.22)]",
+                    "bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 hover:brightness-95 transition",
+                    deliverSaving ? "opacity-60 cursor-not-allowed" : ""
+                  )}
+                >
+                  {deliverSaving ? "Confirmando..." : "Confirmar entrega"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
+}
+
+function toLocalDatetime(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const yyyy = d.getFullYear()
+  const mm = pad(d.getMonth() + 1)
+  const dd = pad(d.getDate())
+  const hh = pad(d.getHours())
+  const mi = pad(d.getMinutes())
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
 }
