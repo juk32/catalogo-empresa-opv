@@ -109,7 +109,9 @@ export default function GenerarPedidoPage() {
         2500
       )
 
-      window.location.href = `/api/pedido/pdf?id=${encodeURIComponent(orderId)}`
+      window.location.href = `/api/orders/${encodeURIComponent(orderId)}/pdf`
+
+      
     } catch (e: any) {
       const msg = e?.message ?? "Error al generar PDF"
       setError(msg)
