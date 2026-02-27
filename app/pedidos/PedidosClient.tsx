@@ -84,7 +84,6 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
     }
   }
 
-  // ✅ carga inicial
   useEffect(() => {
     fetchOrders()
   }, [])
@@ -103,7 +102,6 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
     setDeliverPlace("")
   }
 
-  // ✅ helper: trae pedido por id (tu endpoint devuelve el order directo)
   async function fetchOrderById(id: string): Promise<OrderRow | null> {
     try {
       const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, { cache: "no-store" })
@@ -116,40 +114,40 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
   }
 
   /**
-   * ✅ AUTO ABRIR MODAL POR deliver
-   * - Funciona aunque el query se pierda en móvil (usa initialDeliver)
-   * - Si no está en la lista, hace fetch al server
-   * - Evita loops con openedOnceRef
-   * - Limpia el query solo si venía en URL
+   * ✅ AUTO-OPEN estable (móvil/prod)
+   * - Espera a que termine loading (ya hay lista o ya sabemos que no hay)
+   * - Sólo marca openedOnce si realmente abrió el modal
    */
   useEffect(() => {
     const idFromQuery = sp.get("deliver")
-    const id = ((idFromQuery ?? initialDeliver) ?? "").trim()
-    if (!id) return
+    const deliverId = ((idFromQuery ?? initialDeliver) ?? "").trim()
+    if (!deliverId) return
 
-    if (openedOnceRef.current === id) return
+    // esperamos a que ya haya terminado la carga inicial
+    if (loading) return
+
+    // si ya lo abrimos antes, no lo repitas
+    if (openedOnceRef.current === deliverId) return
 
     let cancelled = false
 
     async function run() {
-      // 1) intenta con lo ya cargado
-      const found = orders.find((o) => o.id === id)
+      // 1) buscar en la lista ya cargada
+      const found = orders.find((o) => o.id === deliverId)
       if (found) {
-        openedOnceRef.current = id
+        if (cancelled) return
+        openedOnceRef.current = deliverId
         openDeliver(found)
       } else {
         // 2) fallback: pedirlo al server
-        const order = await fetchOrderById(id)
+        const order = await fetchOrderById(deliverId)
         if (cancelled || !order) return
 
-        openedOnceRef.current = id
-        // opcional: NO lo metas a la lista (para que “no se mueva” el orden visual)
-        // setOrders((prev) => (prev.some((x) => x.id === order.id) ? prev : [order, ...prev]))
-
+        openedOnceRef.current = deliverId
         openDeliver(order)
       }
 
-      // 3) limpiar deliver del URL para que no se reabra en refresh (solo si venía en query)
+      // 3) limpiar query sólo si venía en URL
       if (idFromQuery) {
         const url = new URL(window.location.href)
         url.searchParams.delete("deliver")
@@ -162,7 +160,7 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
     return () => {
       cancelled = true
     }
-  }, [sp, initialDeliver, orders, router])
+  }, [sp, initialDeliver, loading, orders, router])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -201,7 +199,6 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
 
   return (
     <section className="relative space-y-5 sm:space-y-7">
-      {/* fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-[-120px] h-[320px] w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-indigo-300/25 to-fuchsia-300/35 blur-3xl" />
         <div className="absolute right-[-140px] top-[35%] h-[280px] w-[280px] rounded-full bg-gradient-to-br from-emerald-300/18 to-sky-300/18 blur-3xl" />
