@@ -317,11 +317,7 @@ function CategoryCarouselSection({
             {items.map((p, idx) => (
               <div
                 key={p.id}
-                className={cn(
-                  "snap-start",
-                  "min-w-[240px] sm:min-w-[300px] lg:min-w-[340px]",
-                  "h-[510px] sm:h-[520px]"
-                )}
+                className={cn("snap-start", "min-w-[240px] sm:min-w-[300px] lg:min-w-[340px]", "h-[510px] sm:h-[520px]")}
               >
                 <ProductCard p={p} i={startIndex + idx} />
               </div>
@@ -549,6 +545,17 @@ export default function ProductosPage() {
             <span className={`inline-block mr-2 ${reloading ? "spin" : ""}`}>🔄</span>
             Recargar
           </button>
+
+          {/* ✅ NUEVO: Imprimir PDF */}
+          <button
+            type="button"
+            onClick={() => window.open("/api/catalogo/pdf", "_blank")}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900
+                       shadow-sm hover:bg-slate-50 transition active:scale-[0.98]"
+            title="Abrir PDF del catálogo"
+          >
+            🖨️ Imprimir PDF
+          </button>
         </div>
       </div>
 
@@ -633,19 +640,9 @@ export default function ProductosPage() {
         <div className="space-y-10">
           {grouped.map((g, sectionIdx) =>
             view === "carousel" ? (
-              <CategoryCarouselSection
-                key={g.category}
-                title={g.category}
-                items={g.items}
-                startIndex={sectionIdx * 1000}
-              />
+              <CategoryCarouselSection key={g.category} title={g.category} items={g.items} startIndex={sectionIdx * 1000} />
             ) : (
-              <CategoryGridSection
-                key={g.category}
-                title={g.category}
-                items={g.items}
-                startIndex={sectionIdx * 1000}
-              />
+              <CategoryGridSection key={g.category} title={g.category} items={g.items} startIndex={sectionIdx * 1000} />
             )
           )}
         </div>
