@@ -61,11 +61,11 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
   // modal entrega
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [deliverOrder, setDeliverOrder] = useState<OrderRow | null>(null)
-  const [deliverAt, setDeliverAt] = useState("") // datetime-local
+  const [deliverAt, setDeliverAt] = useState("")
   const [deliverPlace, setDeliverPlace] = useState("")
   const [deliverSaving, setDeliverSaving] = useState(false)
 
-  // evita loops / reabrir
+  // evita reabrir / loops
   const openedOnceRef = useRef<string | null>(null)
 
   async function fetchOrders() {
@@ -74,7 +74,6 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
     try {
       const res = await fetch("/api/orders", { cache: "no-store" })
       const data = await res.json().catch(() => null)
-
       const list = (Array.isArray(data) ? data : data?.orders) as OrderRow[] | undefined
       setOrders(list ?? [])
     } catch (e: any) {
@@ -114,44 +113,44 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
   }
 
   /**
-   * ✅ AUTO-OPEN estable (móvil/prod)
-   * - Espera a que termine loading (ya hay lista o ya sabemos que no hay)
-   * - Sólo marca openedOnce si realmente abrió el modal
+   * ✅ AUTO ABRIR MODAL por ?deliver=ID (fix móvil)
+   * - NO limpiamos el query inmediatamente (eso lo “mata” en Android)
+   * - Limpiamos con setTimeout para evitar remount antes de pintar el modal
    */
   useEffect(() => {
     const idFromQuery = sp.get("deliver")
     const deliverId = ((idFromQuery ?? initialDeliver) ?? "").trim()
     if (!deliverId) return
 
-    // esperamos a que ya haya terminado la carga inicial
     if (loading) return
-
-    // si ya lo abrimos antes, no lo repitas
     if (openedOnceRef.current === deliverId) return
 
     let cancelled = false
 
     async function run() {
-      // 1) buscar en la lista ya cargada
+      // 1) busca en lista
       const found = orders.find((o) => o.id === deliverId)
       if (found) {
         if (cancelled) return
         openedOnceRef.current = deliverId
         openDeliver(found)
       } else {
-        // 2) fallback: pedirlo al server
+        // 2) fallback server
         const order = await fetchOrderById(deliverId)
         if (cancelled || !order) return
-
         openedOnceRef.current = deliverId
         openDeliver(order)
       }
 
-      // 3) limpiar query sólo si venía en URL
+      // 3) limpiar deliver (DELAY) para que el modal alcance a renderizar
       if (idFromQuery) {
-        const url = new URL(window.location.href)
-        url.searchParams.delete("deliver")
-        router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+        window.setTimeout(() => {
+          try {
+            const url = new URL(window.location.href)
+            url.searchParams.delete("deliver")
+            router.replace(url.pathname + (url.search ? url.search : ""), { scroll: false })
+          } catch {}
+        }, 250) // 👈 este delay es el “fix” real en móvil
       }
     }
 
@@ -311,11 +310,9 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
         )}
       </div>
 
-      {/* Modal */}
       {deliverOpen && deliverOrder ? (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px]" onClick={closeDeliver} />
-
           <div className="relative w-[92vw] max-w-2xl rounded-3xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_60px_rgba(2,6,23,0.25)]">
             <div className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
@@ -354,7 +351,6 @@ export default function PedidosClient({ initialDeliver }: { initialDeliver?: str
                       "outline-none focus:ring-2 focus:ring-cyan-300/50"
                     )}
                   />
-                  <div className="mt-1 text-xs text-slate-600">Si lo dejas vacío, se toma la hora actual.</div>
                 </div>
 
                 <div>
